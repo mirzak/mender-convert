@@ -20,7 +20,7 @@ to support additional image formats and contributions are welcome.
 Install dependencies (instructions are based Debian derivatives build should be
 applicable on any major Linux distribution)
 
-    apt-get install mtools parted mtd-utils e2fsprogs u-boot-tools pigz
+    sudo apt-get install mtools parted mtd-utils e2fsprogs u-boot-tools pigz
 
 Mender supports three different server setups:
 
