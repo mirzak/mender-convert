@@ -1,0 +1,132 @@
+#!/bin/bash
+
+# Copyright 2018 Northern.tech AS
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+
+application_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+output_dir=${application_dir}/output
+
+set -e
+
+function cleanup {
+    if mount | grep -q output/rootfs; then
+        sudo umount ${application_dir}/output/rootfs
+    fi
+}
+trap cleanup EXIT
+
+usage() {
+cat << EOF
+Usage: $(basename $0) options (:hc:d:i:m:n:o:s:t:R:)
+    -c - Server certificate (Only for Mender Production setup)
+    -d - Device type (/data/mender/device_type)
+    -i - Path to image to convert
+    -m - Path to Mender client binary
+    -n - Mender artifact_name (/etc/mender/artifact_name)
+    -o - Demo mode, takes demo server IP address as an argument
+    -s - Server URL (Only for Mender Production setup)
+    -t - File containing Hosted Mender token (Hosted Mender mode)
+    -R - Root file-system partition size in MB
+    -h - Prints this text
+EOF
+    exit 1
+}
+
+mender_rootfs_part_size_mb=1024
+
+[ $# -eq 0 ] && usage
+
+while getopts ":hc:d:i:m:n:o:s:t:R:" arg; do
+    case $arg in
+    c) # Mender Production server certificate
+        mender_production_cert=${OPTARG}
+        echo "Mender Production certificate: ${mender_production_cert}"
+        ;;
+    d) # Device type
+        device_type=${OPTARG}
+        echo "Device type: ${device_type}"
+        ;;
+    i) # Path to image
+        image_to_convert=${OPTARG}
+        echo "Image to convert: ${image_to_convert}"
+        ;;
+    n) # Mender artifact name
+        artifact_name=${OPTARG}
+        echo "Mender artifact name: ${artifact_name}"
+        ;;
+    m) # Path to Mender client binary
+        mender_binary=${OPTARG}
+        echo "Path to Mender client binary: ${mender_binary}"
+        ;;
+    o) # Demo server IP address
+        mender_demo_ip=${OPTARG}
+        echo "Mender demo server IP: ${mender_demo_ip}"
+        ;;
+    s) # Server URL
+        mender_production_url=${OPTARG}
+        echo "Mender Production URL: ${mender_production_url}"
+        ;;
+    t) # Hosted Mender token
+        mender_hosted_token=${OPTARG}
+        echo "Hosted Mender token: ${mender_hosted_token}"
+        ;;
+    R) # Hosted Mender token
+        mender_rootfs_part_size_mb=${OPTARG}
+        echo "Root file-system partition size (MB): ${mender_rootfs_part_size_mb}"
+        ;;
+    h | *) # Display help.
+        usage
+        ;;
+    esac
+done
+
+if [ -z "$artifact_name" ] || [ -z "$image_to_convert" ] || \
+    [ -z "$mender_binary" ] || [ -z "$device_type" ]; then
+    usage
+fi
+
+if [ ! -e ${mender_binary} ]; then
+    echo "${mender_binary}: can not be found"
+    exit 1
+fi
+
+stage_2_args="-a ${artifact_name} -d ${output_dir}/data -m ${mender_binary} \
+    -r ${output_dir}/rootfs -t ${device_type}"
+
+if [ -n "${mender_hosted_token}" ]; then
+    stage_2_args="${stage_2_args} -T ${mender_hosted_token}"
+fi
+
+if [ -n "${mender_production_cert}" ]; then
+    stage_2_args="${stage_2_args} -c ${mender_production_cert} -s ${mender_production_url}"
+fi
+
+if [ -n "${mender_demo_ip}" ]; then
+    stage_2_args="${stage_2_args} -o ${mender_demo_ip}"
+fi
+
+${application_dir}/convert-stage-1.sh ${image_to_convert}
+
+mkdir -p ${output_dir}/data
+
+eval set -- " ${stage_2_args}"
+
+${application_dir}/convert-stage-2.sh ${stage_2_args}
+
+${application_dir}/convert-stage-3.sh
+${application_dir}/convert-stage-4.sh
+${application_dir}/convert-stage-99.sh ${mender_rootfs_part_size_mb}
+
+cleanup
+
