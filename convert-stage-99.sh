@@ -82,7 +82,7 @@ actual_rootfs_size=$(du -s --block-size=512 ${output_dir}/rootfs | awk '{ print 
 rootfs_size=$(awk -v r1="$actual_rootfs_size" 'BEGIN{printf "%.0f", r1 * 1.20}')
 
 echo "Creating a ext4 file-system image from modified root file-system"
-dd if=/dev/zero of=${output_dir}/rootfs.ext4 seek=${rootfs_size} count=0 bs=512 status=none
+dd if=/dev/zero of=${output_dir}/rootfs.ext4 seek=${rootfs_size} count=0 bs=512 status=none conv=sparse
 
 # From mkfs.ext4 man page
 #
@@ -101,7 +101,7 @@ fsck.ext4 -fp ${output_dir}/rootfs.ext4
 data_size=$((512*256*2))
 
 echo "Creating an ext4 file-system image of /data contents"
-dd if=/dev/zero of=${output_dir}/data.ext4 seek=${data_size} count=0 bs=512 status=none
+dd if=/dev/zero of=${output_dir}/data.ext4 seek=${data_size} count=0 bs=512 status=none conv=sparse
 sudo mkfs.ext4 -F ${output_dir}/data.ext4 -d ${output_dir}/data
 
 if [[ $(which mender-artifact) = 1 ]]; then
@@ -147,7 +147,7 @@ echo "    Data           $(expr ${data_size} / 2) KiB"
 image_has_boot_part=$(test -f ${output_dir}/boot.vfat)
 
 # Initialize sdcard image file
-dd if=/dev/zero of=${sdimg_path} bs=512 count=0 seek=${sdimg_size}
+dd if=/dev/zero of=${sdimg_path} bs=512 count=0 seek=${sdimg_size} conv=sparse
 
 # Align sizes
 boot_part_size=$(align_partition_size ${boot_part_size} ${image_alignment})
@@ -179,9 +179,9 @@ parted -s ${sdimg_path} -- unit s mkpart primary ext2 ${data_start} ${data_end}
 parted ${sdimg_path} print
 
 # Burn Partitions
-dd if=${output_dir}/boot.vfat of=${sdimg_path} conv=notrunc seek=${boot_part_start}
-dd if=${output_dir}/rootfs.ext4 of=${sdimg_path} conv=notrunc seek=${rootfsa_start}
-dd if=${output_dir}/rootfs.ext4 of=${sdimg_path} conv=notrunc seek=${rootfsb_start}
-dd if=${output_dir}/data.ext4 of=${sdimg_path} conv=notrunc seek=${data_start}
+dd if=${output_dir}/boot.vfat of=${sdimg_path} conv=notrunc seek=${boot_part_start} conv=sparse
+dd if=${output_dir}/rootfs.ext4 of=${sdimg_path} conv=notrunc seek=${rootfsa_start} conv=sparse
+dd if=${output_dir}/rootfs.ext4 of=${sdimg_path} conv=notrunc seek=${rootfsb_start} conv=sparse
+dd if=${output_dir}/data.ext4 of=${sdimg_path} conv=notrunc seek=${data_start} conv=sparse
 
 #pigz -f -9 -n ${sdimg_path}

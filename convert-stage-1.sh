@@ -27,7 +27,7 @@ output_dir=${application_dir}/output
 #  $3 - size (in 512 blocks)
 #  $4 - output filename
 extract_file_from_image() {
-    local cmd="dd if=$1 of=${output_dir}/$4 skip=$2 bs=512 count=$3 status=progress"
+    local cmd="dd if=$1 of=${output_dir}/$4 skip=$2 bs=512 count=$3 status=progress conv=sparse"
 
     echo "Running command:"
     echo "    ${cmd}"
