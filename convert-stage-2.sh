@@ -229,7 +229,7 @@ do_add_mender() {
     if [ -n "${mender_demo_ip}" ]; then
         mender_update_poll_interval_seconds="5"
         mender_inventory_poll_interval_seconds="5"
-        mender_retry_poll_interval_seconds="1"
+        mender_retry_poll_interval_seconds="30"
     fi
 
     get_mender_files_from_upstream
