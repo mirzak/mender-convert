@@ -44,6 +44,17 @@ EOF
     exit 1
 }
 
+# Prompt the user for a yes/no answer
+# default to "no"
+promptYN() {
+    local prompt="$1"
+    printf "%s" "$prompt" >&2 && read yn
+    case $yn in
+        [Yy]* ) echo "y";;
+        *     ) echo "n";;
+    esac
+}
+
 mender_rootfs_part_size_mb=1024
 mender_data_part_size_mb=256
 
@@ -120,6 +131,10 @@ fi
 
 if [ -n "${mender_demo_ip}" ]; then
     stage_2_args="${stage_2_args} -o ${mender_demo_ip}"
+fi
+
+if [ -d ${output_dir} ]; then
+    [ "$(promptYN "Warning. ${output_dir} already exists and will be overwritten. OK? ")" = "y" ] || exit 0
 fi
 
 ${application_dir}/convert-stage-1.sh ${image_to_convert}
