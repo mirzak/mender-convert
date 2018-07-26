@@ -44,7 +44,7 @@ fi
 
 image_to_convert=$1
 
-image_boot_part=$(fdisk -l ${image_to_convert} | grep FAT32)
+image_boot_part=$(fdisk -l ${image_to_convert} | grep FAT32 || true)
 
 rm -rf ${output_dir}
 mkdir ${output_dir}
