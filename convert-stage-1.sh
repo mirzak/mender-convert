@@ -70,7 +70,7 @@ if [ -n "${image_boot_part}" ]; then
         "boot.vfat"
 fi
 
-image_rootfs_part=$(fdisk -l ${image_to_convert} | grep Linux)
+image_rootfs_part=$(fdisk -l ${image_to_convert} | grep 'Linux$' | tr -d '*')
 
 if [ -n "${image_rootfs_part}" ]; then
     rootfs_part_start=$(echo ${image_rootfs_part} | awk '{print $2}')
