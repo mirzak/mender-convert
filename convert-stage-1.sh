@@ -42,47 +42,58 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
-image_to_convert=$1
-
-image_boot_part=$(fdisk -l ${image_to_convert} | grep FAT32 || true)
-
 rm -rf ${output_dir}
 mkdir ${output_dir}
 
+image_to_convert=$1
+
 echo "${image_to_convert}"
-fdisk -l ${image_to_convert}
+if [ $(file ${image_to_convert} | grep -c "boot sector") -eq 1 ]; then
+    #
+    # This image is a multi-partition file.
+    # Extract the components.
+    #
+    fdisk -l ${image_to_convert}
 
-if [ -n "${image_boot_part}" ]; then
-    echo "Found a boot partition"
-    boot_part_start=$(echo ${image_boot_part} | awk '{print $2}')
-    boot_part_end=$(echo ${image_boot_part} | awk '{print $3}')
-    boot_part_size=$(echo ${image_boot_part} | awk '{print $4}')
+    image_boot_part=$(fdisk -l ${image_to_convert} | grep FAT32 || true)
+    if [ -n "${image_boot_part}" ]; then
+        echo "Found a boot partition"
+        boot_part_start=$(echo ${image_boot_part} | awk '{print $2}')
+        boot_part_end=$(echo ${image_boot_part} | awk '{print $3}')
+        boot_part_size=$(echo ${image_boot_part} | awk '{print $4}')
 
-    echo "boot_part_start=${boot_part_start}" >> ${output_dir}/boot-part-env
-    echo "boot_part_end=${boot_part_end}" >> ${output_dir}/boot-part-env
-    echo "boot_part_size=${boot_part_size}" >> ${output_dir}/boot-part-env
+        echo "boot_part_start=${boot_part_start}" >> ${output_dir}/boot-part-env
+        echo "boot_part_end=${boot_part_end}" >> ${output_dir}/boot-part-env
+        echo "boot_part_size=${boot_part_size}" >> ${output_dir}/boot-part-env
 
-    echo "Extracting boot partition to ${output_dir}/boot.vfat"
-    extract_file_from_image \
-        ${image_to_convert} \
-        ${boot_part_start} \
-        ${boot_part_size} \
-        "boot.vfat"
-fi
+        echo "Extracting boot partition to ${output_dir}/boot.vfat"
+        extract_file_from_image \
+            ${image_to_convert} \
+            ${boot_part_start} \
+            ${boot_part_size} \
+            "boot.vfat"
+    fi
 
-image_rootfs_part=$(fdisk -l ${image_to_convert} | grep '\(Linux\|Linux filesystem\)$' | tr -d '*')
+    image_rootfs_part=$(fdisk -l ${image_to_convert} | grep '\(Linux\|Linux filesystem\)$' | tr -d '*')
+    if [ -n "${image_rootfs_part}" ]; then
+        rootfs_part_start=$(echo ${image_rootfs_part} | awk '{print $2}')
+        rootfs_part_end=$(echo ${image_rootfs_part} | awk '{print $3}')
+        rootfs_part_size=$(echo ${image_rootfs_part} | awk '{print $4}')
 
-if [ -n "${image_rootfs_part}" ]; then
-    rootfs_part_start=$(echo ${image_rootfs_part} | awk '{print $2}')
-    rootfs_part_end=$(echo ${image_rootfs_part} | awk '{print $3}')
-    rootfs_part_size=$(echo ${image_rootfs_part} | awk '{print $4}')
-
-    echo "Extracting root file-system partition to ${output_dir}/rootfs.img"
-    extract_file_from_image \
-        ${image_to_convert} \
-        ${rootfs_part_start} \
-        ${rootfs_part_size} \
-        "rootfs.img"
+        echo "Extracting root file-system partition to ${output_dir}/rootfs.img"
+        extract_file_from_image \
+            ${image_to_convert} \
+            ${rootfs_part_start} \
+            ${rootfs_part_size} \
+            "rootfs.img"
+    fi
+elif [ $(file ${image_to_convert} | grep -c "ext. filesystem data") -eq 1 ]; then
+    #
+    # This image is a single filesystem image.
+    # Use this as is
+    #
+    echo "Copying root file-system partition ${image_to_convert} to ${output_dir}/rootfs.img"
+    cp --sparse=always ${image_to_convert} "${output_dir}/rootfs.img"
 fi
 
 mkdir -p ${output_dir}/rootfs
