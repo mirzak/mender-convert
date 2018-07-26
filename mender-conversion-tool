@@ -30,6 +30,7 @@ usage() {
 cat << EOF
 Usage: $(basename $0) options (:hc:d:i:m:n:o:s:t:R:)
     -c - Server certificate (Only for Mender Production setup)
+    -D - Data partition size in MB
     -d - Device type (/data/mender/device_type)
     -i - Path to image to convert
     -m - Path to Mender client binary
@@ -44,10 +45,11 @@ EOF
 }
 
 mender_rootfs_part_size_mb=1024
+mender_data_part_size_mb=256
 
 [ $# -eq 0 ] && usage
 
-while getopts ":hc:d:i:m:n:o:s:t:R:" arg; do
+while getopts ":hc:d:D:i:m:n:o:s:t:R:" arg; do
     case $arg in
     c) # Mender Production server certificate
         mender_production_cert=${OPTARG}
@@ -56,6 +58,10 @@ while getopts ":hc:d:i:m:n:o:s:t:R:" arg; do
     d) # Device type
         device_type=${OPTARG}
         echo "Device type: ${device_type}"
+        ;;
+    D) # Data partition size
+        mender_data_part_size_mb=${OPTARG}
+        echo "Data partition size (MB): ${mender_data_part_size_mb}"
         ;;
     i) # Path to image
         image_to_convert=${OPTARG}
@@ -81,7 +87,7 @@ while getopts ":hc:d:i:m:n:o:s:t:R:" arg; do
         mender_hosted_token=${OPTARG}
         echo "Hosted Mender token: ${mender_hosted_token}"
         ;;
-    R) # Hosted Mender token
+    R) # Root filesystem size
         mender_rootfs_part_size_mb=${OPTARG}
         echo "Root file-system partition size (MB): ${mender_rootfs_part_size_mb}"
         ;;
@@ -126,7 +132,7 @@ ${application_dir}/convert-stage-2.sh ${stage_2_args}
 
 ${application_dir}/convert-stage-3.sh
 ${application_dir}/convert-stage-4.sh
-${application_dir}/convert-stage-99.sh ${mender_rootfs_part_size_mb}
+${application_dir}/convert-stage-99.sh ${mender_rootfs_part_size_mb} ${mender_data_part_size_mb}
 
 cleanup
 

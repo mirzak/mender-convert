@@ -39,9 +39,9 @@ align_partition_size() {
 
 echo "Running: $(basename $0)"
 
-if [ -z "$1" ]; then
+if [ -z "$1" ] || [ -z "$2" ]; then
     echo "Usage:"
-    echo "    $(basename $0) < rootfs part size >"
+    echo "    $(basename $0) < rootfs part size > < data part size >"
 fi
 
 rootfs_part_size=$1
@@ -54,6 +54,17 @@ fi
 
 # Convert to 512 blocks
 rootfs_part_size=$(expr ${rootfs_part_size} \* 1024 \* 2)
+
+data_part_size=$2
+# Sanity check
+if [ ${data_part_size} -ge 16384 ]; then
+    echo "Data part set to: ${data_part_size} MB"
+    echo "Assuming that this is a mistake and exiting"
+    exit 1
+fi
+
+# Convert to 512 blocks
+data_part_size=$(expr ${data_part_size} \* 1024 \* 2)
 
 if [ ! -f ${output_dir}/rootfs/usr/bin/mender ]; then
     echo "Can not find Mender client on target root file-system"
@@ -97,11 +108,8 @@ sudo mkfs.ext4 -FF ${output_dir}/rootfs.ext4 -d ${output_dir}/rootfs
 # Do a file-system check and fix if there are any problems
 fsck.ext4 -fp ${output_dir}/rootfs.ext4
 
-# number of sectors (256 MB)
-data_size=$((512*256*2))
-
 echo "Creating an ext4 file-system image of /data contents"
-dd if=/dev/zero of=${output_dir}/data.ext4 seek=${data_size} count=0 bs=512 status=none conv=sparse
+dd if=/dev/zero of=${output_dir}/data.ext4 seek=${data_part_size} count=0 bs=512 status=none conv=sparse
 sudo mkfs.ext4 -F ${output_dir}/data.ext4 -d ${output_dir}/data
 
 if [[ $(which mender-artifact) = 1 ]]; then
@@ -135,14 +143,15 @@ fi
 # integration of raspberrypi puts U-boot env at 8 MB offset so have to put the
 # alignment further in at 12 MB, which is also the start of boot part.
 image_alignment="24576"
+number_of_partitions="4"
 
 sdimg_path=${output_dir}/${device_type}-${artifact_name}.sdimg
-sdimg_size=$(expr ${image_alignment} + ${boot_part_size} + ${rootfs_part_size} \* 2 + ${data_size} + ${data_size})
+sdimg_size=$(expr ${image_alignment} \* ${number_of_partitions} + ${boot_part_size} + ${rootfs_part_size} \* 2 + ${data_part_size})
 
 echo "Creating filesystem with :"
 echo "    Boot partition $(expr ${boot_part_size} / 2) KiB"
 echo "    RootFS         $(expr ${rootfs_part_size} / 2) KiB"
-echo "    Data           $(expr ${data_size} / 2) KiB"
+echo "    Data           $(expr ${data_part_size} / 2) KiB"
 
 image_has_boot_part=$(test -f ${output_dir}/boot.vfat)
 
@@ -152,7 +161,7 @@ dd if=/dev/zero of=${sdimg_path} bs=512 count=0 seek=${sdimg_size} conv=sparse
 # Align sizes
 boot_part_size=$(align_partition_size ${boot_part_size} ${image_alignment})
 rootfs_part_size=$(align_partition_size ${rootfs_part_size} ${image_alignment})
-data_size=$(align_partition_size ${data_size} ${image_alignment})
+data_part_size=$(align_partition_size ${data_part_size} ${image_alignment})
 
 boot_part_start=${image_alignment}
 boot_part_end=$(expr ${image_alignment} + ${boot_part_size})
@@ -161,7 +170,7 @@ rootfsa_end=$(expr ${rootfsa_start} + ${rootfs_part_size})
 rootfsb_start=$(expr ${rootfsa_end} + ${image_alignment})
 rootfsb_end=$(expr ${rootfsb_start} + ${rootfs_part_size})
 data_start=$(expr ${rootfsb_end} + ${image_alignment})
-data_end=$(expr ${data_start} + ${data_size})
+data_end=$(expr ${data_start} + ${data_part_size})
 
 echo "rootfsa_start: ${rootfsa_start}"
 echo "rootfsb_start: ${rootfsb_start}"
