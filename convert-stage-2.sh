@@ -107,19 +107,19 @@ EOF
 }
 
 get_mender_files_from_upstream() {
-    wget -O ${output_dir}/mender-device-identity \
+    wget -qO ${output_dir}/mender-device-identity \
         ${mender_client_revision}/support/mender-device-identity
 
-    wget -O ${output_dir}/mender-inventory-hostinfo \
+    wget -qO ${output_dir}/mender-inventory-hostinfo \
         ${mender_client_revision}/support/mender-inventory-hostinfo
 
-    wget -O ${output_dir}/mender-inventory-network \
+    wget -qO ${output_dir}/mender-inventory-network \
         ${mender_client_revision}/support/mender-inventory-network
 
-    wget -O ${output_dir}/fw_printenv \
+    wget -qO ${output_dir}/fw_printenv \
         ${meta_mender_revision}/meta-mender-core/recipes-bsp/grub/files/fw_printenv
 
-    wget -O ${output_dir}/server.crt \
+    wget -qO ${output_dir}/server.crt \
         ${meta_mender_revision}/meta-mender-demo/recipes-mender/mender/files/server.crt
 }
 
