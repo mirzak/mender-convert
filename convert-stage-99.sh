@@ -103,19 +103,32 @@ dd if=/dev/zero of=${output_dir}/rootfs.ext4 seek=${rootfs_size} count=0 bs=512 
 #     sense. In order to force mke2fs to create a filesystem even if the
 #     filesystem appears to be in use or is mounted (a truly dangerous thing
 #     to do), this option must be specified twice.
-sudo mkfs.ext4 -FF ${output_dir}/rootfs.ext4 -d ${output_dir}/rootfs
+sudo mkfs.ext4 -FF ${output_dir}/rootfs.ext4
+mkdir ${output_dir}/rootfs-output
+sudo mount ${output_dir}/rootfs.ext4 ${output_dir}/rootfs-output
+sudo rsync -SaqP --delete ${output_dir}/rootfs/ ${output_dir}/rootfs-output/
+sudo umount ${output_dir}/rootfs-output
+rmdir ${output_dir}/rootfs-output
 
 # Do a file-system check and fix if there are any problems
 fsck.ext4 -fp ${output_dir}/rootfs.ext4
 
 echo "Creating an ext4 file-system image of /data contents"
 dd if=/dev/zero of=${output_dir}/data.ext4 seek=${data_part_size} count=0 bs=512 status=none conv=sparse
-sudo mkfs.ext4 -F ${output_dir}/data.ext4 -d ${output_dir}/data
+sudo mkfs.ext4 -F ${output_dir}/data.ext4
+mkdir ${output_dir}/data-output
+sudo mount ${output_dir}/data.ext4 ${output_dir}/data-output
+sudo rsync -SaqP --delete ${output_dir}/data/ ${output_dir}/data-output/
+sudo umount ${output_dir}/data-output
+rmdir ${output_dir}/data-output
 
 if [[ $(which mender-artifact) = 1 ]]; then
     echo "mender-artifact not found in PATH"
     exit 1
 fi
+
+# Do a file-system check and fix if there are any problems
+fsck.ext4 -fp ${output_dir}/data.ext4
 
 mender_artifact=${output_dir}/${device_type}-${artifact_name}.mender
 
