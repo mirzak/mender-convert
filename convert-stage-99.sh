@@ -87,7 +87,7 @@ fi
 # Make sure that everything is flushed before we create the file-systems
 sync
 
-actual_rootfs_size=$(du -s --block-size=512 ${output_dir}/rootfs | awk '{ print $1 }')
+actual_rootfs_size=$(sudo du -s --block-size=512 ${output_dir}/rootfs | awk '{ print $1 }')
 
 # 20 % free space, not to be confused with rootfs_part_size
 rootfs_size=$(awk -v r1="$actual_rootfs_size" 'BEGIN{printf "%.0f", r1 * 1.20}')
