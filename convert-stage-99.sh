@@ -122,11 +122,6 @@ sudo rsync -SaqP --delete ${output_dir}/data/ ${output_dir}/data-output/
 sudo umount ${output_dir}/data-output
 rmdir ${output_dir}/data-output
 
-if [[ $(which mender-artifact) = 1 ]]; then
-    echo "mender-artifact not found in PATH"
-    exit 1
-fi
-
 # Do a file-system check and fix if there are any problems
 (fsck.ext4 -fp ${output_dir}/data.ext4 || true)
 
@@ -135,7 +130,7 @@ mender_artifact=${output_dir}/${device_type}-${artifact_name}.mender
 echo "Writing Mender artifact to: ${mender_artifact}"
 
 #Create Mender artifact
-mender-artifact write rootfs-image \
+${application_dir}/bin/mender-artifact write rootfs-image \
     --update ${output_dir}/rootfs.ext4 \
     --output-path ${mender_artifact} \
     --artifact-name ${artifact_name} \
