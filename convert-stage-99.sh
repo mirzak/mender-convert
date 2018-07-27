@@ -20,16 +20,16 @@ output_dir=${application_dir}/output
 
 set -e
 
-allign_partition_size() {
+align_partition_size() {
   local rvar_size=$1
   local rvar_alignment=$2
 
   size_in_bytes=$(( $rvar_size * 512 ))
   alignment_in_bytes=$(( $rvar_alignment * 512))
-  reminder=$(( ${size_in_bytes} % ${alignment_in_bytes} ))
+  remainder=$(( ${size_in_bytes} % ${alignment_in_bytes} ))
 
-  if [ $reminder -ne 0 ]; then
-    size_in_bytes=$(( $size_in_bytes - $reminder + $alignment_in_bytes ))
+  if [ $remainder -ne 0 ]; then
+    size_in_bytes=$(( $size_in_bytes - $remainder + $alignment_in_bytes ))
   fi
 
   local lsize=$(( $size_in_bytes / 512 ))
@@ -69,7 +69,7 @@ if [ -z "${device_type}" ]; then
 fi
 
 if [ -z "${artifact_name}" ]; then
-    echo "Articat name not found in root file-system. Aborting..."
+    echo "Artifact name not found in root file-system. Aborting..."
     exit 1
 fi
 
@@ -134,10 +134,10 @@ fi
 # We should really use the value in boot_part_start as alignment but current
 # integration of raspberrypi puts U-boot env at 8 MB offset so have to put the
 # alignment further in at 12 MB, which is also the start of boot part.
-image_alignmnet="24576"
+image_alignment="24576"
 
 sdimg_path=${output_dir}/${device_type}-${artifact_name}.sdimg
-sdimg_size=$(expr ${image_alignmnet} + ${boot_part_size} + ${rootfs_part_size} \* 2 + ${data_size} + ${data_size})
+sdimg_size=$(expr ${image_alignment} + ${boot_part_size} + ${rootfs_part_size} \* 2 + ${data_size} + ${data_size})
 
 echo "Creating filesystem with :"
 echo "    Boot partition $(expr ${boot_part_size} / 2) KiB"
@@ -150,17 +150,17 @@ image_has_boot_part=$(test -f ${output_dir}/boot.vfat)
 dd if=/dev/zero of=${sdimg_path} bs=512 count=0 seek=${sdimg_size}
 
 # Align sizes
-boot_part_size=$(allign_partition_size ${boot_part_size} ${image_alignmnet})
-rootfs_part_size=$(allign_partition_size ${rootfs_part_size} ${image_alignmnet})
-data_size=$(allign_partition_size ${data_size} ${image_alignmnet})
+boot_part_size=$(align_partition_size ${boot_part_size} ${image_alignment})
+rootfs_part_size=$(align_partition_size ${rootfs_part_size} ${image_alignment})
+data_size=$(align_partition_size ${data_size} ${image_alignment})
 
-boot_part_start=${image_alignmnet}
-boot_part_end=$(expr ${image_alignmnet} + ${boot_part_size})
-rootfsa_start=$(expr ${boot_part_end} + ${image_alignmnet})
+boot_part_start=${image_alignment}
+boot_part_end=$(expr ${image_alignment} + ${boot_part_size})
+rootfsa_start=$(expr ${boot_part_end} + ${image_alignment})
 rootfsa_end=$(expr ${rootfsa_start} + ${rootfs_part_size})
-rootfsb_start=$(expr ${rootfsa_end} + ${image_alignmnet})
+rootfsb_start=$(expr ${rootfsa_end} + ${image_alignment})
 rootfsb_end=$(expr ${rootfsb_start} + ${rootfs_part_size})
-data_start=$(expr ${rootfsb_end} + ${image_alignmnet})
+data_start=$(expr ${rootfsb_end} + ${image_alignment})
 data_end=$(expr ${data_start} + ${data_size})
 
 echo "rootfsa_start: ${rootfsa_start}"

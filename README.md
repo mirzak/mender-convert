@@ -26,7 +26,7 @@ Mender supports three different server setups:
 
 - Mender Demo - https://docs.mender.io/development/getting-started/create-a-test-environment
 - Mender Production - https://docs.mender.io/development/administration/production-installation
-- Hosted Mender - https://hosted.mender.io"
+- Hosted Mender - https://hosted.mender.io
 
 Mender client configuration is different for each type.
 
