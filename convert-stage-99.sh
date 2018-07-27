@@ -16,7 +16,7 @@
 #    limitations under the License.
 
 application_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-output_dir=${application_dir}/output
+output_dir=${MENDER_CONVERSION_OUTPUT_DIR:-${application_dir}}/output
 
 set -e
 

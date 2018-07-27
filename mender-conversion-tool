@@ -15,13 +15,13 @@
 #    limitations under the License.
 
 application_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-output_dir=${application_dir}/output
+output_dir=${MENDER_CONVERSION_OUTPUT_DIR:-${application_dir}}/output
 
 set -e
 
 function cleanup {
     if mount | grep -q output/rootfs; then
-        sudo umount ${application_dir}/output/rootfs
+        sudo umount ${output_dir}/rootfs
     fi
 }
 trap cleanup EXIT

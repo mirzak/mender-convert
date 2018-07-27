@@ -17,7 +17,7 @@
 set -e
 
 application_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-output_dir=${application_dir}/output
+output_dir=${MENDER_CONVERSION_OUTPUT_DIR:-${application_dir}}/output
 
 meta_mender_revision="https://raw.githubusercontent.com/mendersoftware/meta-mender/sumo/"
 mender_client_revision="https://raw.githubusercontent.com/mendersoftware/mender/1.5.x/"
