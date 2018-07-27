@@ -42,7 +42,7 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
-rm -rf ${output_dir}
+sudo rm -rf ${output_dir}
 mkdir ${output_dir}
 
 image_to_convert=$1
