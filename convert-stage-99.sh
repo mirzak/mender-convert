@@ -146,7 +146,10 @@ echo "    Boot partition $(expr ${boot_part_size} / 2) KiB"
 echo "    RootFS         $(expr ${rootfs_part_size} / 2) KiB"
 echo "    Data           $(expr ${data_part_size} / 2) KiB"
 
-image_has_boot_part=$(test -f ${output_dir}/boot.vfat)
+if [ ! -f ${output_dir}/boot.vfat ]; then
+    echo "${output_dir}/boot.vfat: not found"
+    exit 1
+fi
 
 # Initialize sdcard image file
 dd if=/dev/zero of=${sdimg_path} bs=512 count=0 seek=${sdimg_size} conv=sparse

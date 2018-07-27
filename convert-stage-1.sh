@@ -62,10 +62,6 @@ if [ $(file ${image_to_convert} | grep -c "boot sector") -eq 1 ]; then
         boot_part_end=$(echo ${image_boot_part} | awk '{print $3}')
         boot_part_size=$(echo ${image_boot_part} | awk '{print $4}')
 
-        echo "boot_part_start=${boot_part_start}" >> ${output_dir}/boot-part-env
-        echo "boot_part_end=${boot_part_end}" >> ${output_dir}/boot-part-env
-        echo "boot_part_size=${boot_part_size}" >> ${output_dir}/boot-part-env
-
         echo "Extracting boot partition to ${output_dir}/boot.vfat"
         extract_file_from_image \
             ${image_to_convert} \
@@ -95,6 +91,16 @@ elif [ $(file ${image_to_convert} | grep -c "ext. filesystem data") -eq 1 ]; the
     echo "Copying root file-system partition ${image_to_convert} to ${output_dir}/rootfs.img"
     cp --sparse=always ${image_to_convert} "${output_dir}/rootfs.img"
 fi
+
+if [ -z "${boot_part_start}" ]; then
+    echo "No boot partition found.  Using defaults"
+    boot_part_start="16384"
+    boot_part_end="49151"
+    boot_part_size="32768"
+fi
+echo "boot_part_start=${boot_part_start}" >> ${output_dir}/boot-part-env
+echo "boot_part_end=${boot_part_end}" >> ${output_dir}/boot-part-env
+echo "boot_part_size=${boot_part_size}" >> ${output_dir}/boot-part-env
 
 mkdir -p ${output_dir}/rootfs
 sudo mount -o loop ${output_dir}/rootfs.img ${output_dir}/rootfs
