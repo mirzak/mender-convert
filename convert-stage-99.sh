@@ -39,9 +39,9 @@ align_partition_size() {
 
 echo "Running: $(basename $0)"
 
-if [ -z "$1" ] || [ -z "$2" ]; then
+if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] ; then
     echo "Usage:"
-    echo "    $(basename $0) < rootfs part size > < data part size >"
+    echo "    $(basename $0) < rootfs part size > < data part size > < image-alignment >"
 fi
 
 rootfs_part_size=$1
@@ -65,6 +65,8 @@ fi
 
 # Convert to 512 blocks
 data_part_size=$(expr ${data_part_size} \* 1024 \* 2)
+
+image_alignment=$3
 
 if [ ! -f ${output_dir}/rootfs/usr/bin/mender ]; then
     echo "Can not find Mender client on target root file-system"
@@ -150,7 +152,6 @@ fi
 # We should really use the value in boot_part_start as alignment but current
 # integration of raspberrypi puts U-boot env at 8 MB offset so have to put the
 # alignment further in at 12 MB, which is also the start of boot part.
-image_alignment="24576"
 number_of_partitions="4"
 
 sdimg_path=${output_dir}/${device_type}-${artifact_name}.sdimg
