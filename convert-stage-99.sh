@@ -111,7 +111,7 @@ sudo umount ${output_dir}/rootfs-output
 rmdir ${output_dir}/rootfs-output
 
 # Do a file-system check and fix if there are any problems
-fsck.ext4 -fp ${output_dir}/rootfs.ext4
+(fsck.ext4 -fp ${output_dir}/rootfs.ext4 || true)
 
 echo "Creating an ext4 file-system image of /data contents"
 dd if=/dev/zero of=${output_dir}/data.ext4 seek=${data_part_size} count=0 bs=512 status=none conv=sparse
@@ -128,7 +128,7 @@ if [[ $(which mender-artifact) = 1 ]]; then
 fi
 
 # Do a file-system check and fix if there are any problems
-fsck.ext4 -fp ${output_dir}/data.ext4
+(fsck.ext4 -fp ${output_dir}/data.ext4 || true)
 
 mender_artifact=${output_dir}/${device_type}-${artifact_name}.mender
 
