@@ -45,28 +45,12 @@ if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] ; then
 fi
 
 rootfs_part_size=$1
-# Sanity check
-if [ ${rootfs_part_size} -ge 16384 ]; then
-    echo "Root file-system part set to: ${rootfs_part_size} MB"
-    echo "Assuming that this is a mistake and exiting"
-    exit 1
-fi
+data_part_size=$2
+image_alignment=$3
 
 # Convert to 512 blocks
 rootfs_part_size=$(expr ${rootfs_part_size} \* 1024 \* 2)
-
-data_part_size=$2
-# Sanity check
-if [ ${data_part_size} -ge 16384 ]; then
-    echo "Data part set to: ${data_part_size} MB"
-    echo "Assuming that this is a mistake and exiting"
-    exit 1
-fi
-
-# Convert to 512 blocks
 data_part_size=$(expr ${data_part_size} \* 1024 \* 2)
-
-image_alignment=$3
 
 if [ ! -f ${output_dir}/rootfs/usr/bin/mender ]; then
     echo "Can not find Mender client on target root file-system"
