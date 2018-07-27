@@ -39,6 +39,7 @@ Usage: $(basename $0) options (:hc:d:i:m:n:o:s:t:R:)
     -s - Server URL (Only for Mender Production setup)
     -t - File containing Hosted Mender token (Hosted Mender mode)
     -R - Root file-system partition size in MB
+    -p - Platform (currently either rpi-ubuntu or pc-ubuntu)
     -h - Prints this text
 EOF
     exit 1
@@ -57,10 +58,11 @@ promptYN() {
 
 mender_rootfs_part_size_mb=1024
 mender_data_part_size_mb=256
+mender_platform="rpi-ubuntu"
 
 [ $# -eq 0 ] && usage
 
-while getopts ":hc:d:D:i:m:n:o:s:t:R:" arg; do
+while getopts ":hc:d:D:i:m:n:o:p:s:t:R:" arg; do
     case $arg in
     c) # Mender Production server certificate
         mender_production_cert=${OPTARG}
@@ -90,6 +92,10 @@ while getopts ":hc:d:D:i:m:n:o:s:t:R:" arg; do
         mender_demo_ip=${OPTARG}
         echo "Mender demo server IP: ${mender_demo_ip}"
         ;;
+    p) # Platform
+        mender_platform=${OPTARG}
+        echo "Mender Platform: ${mender_platform}"
+        ;;
     s) # Server URL
         mender_production_url=${OPTARG}
         echo "Mender Production URL: ${mender_production_url}"
@@ -117,6 +123,16 @@ if [ ! -e ${mender_binary} ]; then
     echo "${mender_binary}: can not be found"
     exit 1
 fi
+
+case ${mender_platform} in
+    "pc-ubuntu" | "rpi-ubuntu" )
+        # Valid settings
+        ;;
+    * )
+        echo "Error.  Unrecognized platform ${mender_platform}"
+        usage
+        ;;
+esac
 
 stage_2_args="-a ${artifact_name} -d ${output_dir}/data -m ${mender_binary} \
     -r ${output_dir}/rootfs -t ${device_type}"
@@ -146,7 +162,7 @@ eval set -- " ${stage_2_args}"
 ${application_dir}/convert-stage-2.sh ${stage_2_args}
 
 ${application_dir}/convert-stage-3.sh
-${application_dir}/convert-stage-4.sh
+${application_dir}/convert-stage-4.sh ${mender_platform}
 ${application_dir}/convert-stage-99.sh ${mender_rootfs_part_size_mb} ${mender_data_part_size_mb}
 
 cleanup

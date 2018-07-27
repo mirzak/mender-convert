@@ -21,6 +21,8 @@ output_dir=${MENDER_CONVERSION_OUTPUT_DIR:-${application_dir}}/output
 set -e
 
 echo "Running: $(basename $0)"
+echo "args: $#"
+mender_platform="$1"
 
 platform_raspberrypi() {
     local bin_dir_pi=${bin_dir}/raspberrypi
@@ -98,6 +100,7 @@ EOF
 }
 
 # Platform specific hacks
-
-# Conditional once we support other boards
-platform_raspberrypi
+case "${mender_platform}" in
+    "rpi-ubuntu" ) platform_raspberrypi;;
+    "pc-ubuntu"  ) platform_pc_ubuntu;;
+esac
