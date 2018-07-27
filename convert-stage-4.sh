@@ -81,6 +81,22 @@ EOF
                         ${output_dir}/rootfs/usr/lib/raspi-config/init_resize.sh
 }
 
+platform_pc_ubuntu() {
+    local bin_dir_pi=${bin_dir}/pc/ubuntu
+    # TODO: Inherit, replace and append
+    cat $output_dir/rootfs/etc/fstab | grep -v ' / ' > $output_dir/fstab
+    cat <<- EOF >> $output_dir/fstab
+
+/dev/root         /         auto       defaults         1  1
+LABEL=data        /data     auto       defaults         0  0
+EOF
+    sudo install -m 0644 ${output_dir}/fstab ${output_dir}/rootfs/etc/fstab
+
+    # Update Linux kernel arguments in GRUB.
+
+    sync
+}
+
 # Platform specific hacks
 
 # Conditional once we support other boards
