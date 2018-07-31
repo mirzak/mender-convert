@@ -89,14 +89,36 @@ platform_pc_ubuntu() {
     cat $output_dir/rootfs/etc/fstab | grep -v ' / ' > $output_dir/fstab
     cat <<- EOF >> $output_dir/fstab
 
-/dev/root         /         auto       defaults         1  1
-LABEL=data        /data     auto       defaults         0  0
+/dev/root         /          auto       defaults         1  1
+LABEL=data        /data      auto       defaults         0  0
+/dev/sda1         /boot/grub auto       defaults         0  0
 EOF
     sudo install -m 0644 ${output_dir}/fstab ${output_dir}/rootfs/etc/fstab
 
-    # Update Linux kernel arguments in GRUB.
+    sudo mv ${output_dir}/rootfs/boot/grub ${output_dir}/rootfs/boot/grub.ubuntu-stock
+    sudo mkdir ${output_dir}/rootfs/boot/grub
 
+    if [ ! -f ${output_dir}/boot-part-env ]; then
+        echo "${output_dir}/boot-part-env: not found"
+        exit 1
+    fi
+
+    . ${output_dir}/boot-part-env
+
+    echo "Creating a vfat file-system image for boot partition contents"
+    dd if=/dev/zero of=${output_dir}/boot.vfat seek=${boot_part_size} count=0 bs=512 status=none conv=sparse
+    sudo mkfs.vfat ${output_dir}/boot.vfat
+
+    # Do a file-system check and fix if there are any problems
     sync
+    (fsck.vfat ${output_dir}/boot.vfat || true)
+    fatlabel ${output_dir}/boot.vfat BOOT
+
+    # Populate the boot/grub partition
+    mkdir -p ${output_dir}/boot/grub
+    sudo mount -o loop ${output_dir}/boot.vfat ${output_dir}/boot/grub
+    sudo rsync -aq --no-o --no-p --no-g --safe-links --delete ${application_dir}/pc-grub/ ${output_dir}/boot/grub/
+    sudo umount ${output_dir}/boot/grub
 }
 
 # Platform specific hacks
