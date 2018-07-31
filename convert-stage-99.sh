@@ -117,6 +117,9 @@ rmdir ${output_dir}/data-output
 # Do a file-system check and fix if there are any problems
 (fsck.ext4 -fp ${output_dir}/data.ext4 || true)
 
+# Apply the label
+e2label ${output_dir}/data.ext4 data
+
 mender_artifact=${output_dir}/${device_type}-${artifact_name}.mender
 
 echo "Writing Mender artifact to: ${mender_artifact}"
