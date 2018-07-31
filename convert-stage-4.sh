@@ -23,6 +23,13 @@ set -e
 echo "Running: $(basename $0)"
 echo "args: $#"
 mender_platform="$1"
+if [ -z "${mender_platform}" ]; then
+    echo "Usage: $(basename $0) platform"
+    echo "Current supported platforms:"
+    echo "    rpi-ubuntu"
+    echo "    pc-ubuntu"
+    exit 1
+fi
 
 platform_raspberrypi() {
     local bin_dir_pi=${bin_dir}/raspberrypi

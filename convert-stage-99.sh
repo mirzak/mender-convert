@@ -20,6 +20,9 @@ output_dir=${MENDER_CONVERSION_OUTPUT_DIR:-${application_dir}}/output
 
 set -e
 
+echo "Running: $(basename $0)"
+echo "args: $#"
+
 align_partition_size() {
   local rvar_size=$1
   local rvar_alignment=$2
@@ -39,14 +42,16 @@ align_partition_size() {
 
 echo "Running: $(basename $0)"
 
-if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] ; then
+if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ]; then
     echo "Usage:"
-    echo "    $(basename $0) < rootfs part size > < data part size > < image-alignment >"
+    echo "    $(basename $0) < rootfs part size > < data part size > < image-alignment > < platform >"
+    exit 1
 fi
 
 rootfs_part_size=$1
 data_part_size=$2
 image_alignment=$3
+mender_platform=$4
 
 # Convert to 512 blocks
 rootfs_part_size=$(expr ${rootfs_part_size} \* 1024 \* 2)
@@ -197,5 +202,11 @@ dd if=${output_dir}/boot.vfat of=${sdimg_path} conv=notrunc seek=${boot_part_sta
 dd if=${output_dir}/rootfs.ext4 of=${sdimg_path} conv=notrunc seek=${rootfsa_start} conv=sparse
 dd if=${output_dir}/rootfs.ext4 of=${sdimg_path} conv=notrunc seek=${rootfsb_start} conv=sparse
 dd if=${output_dir}/data.ext4 of=${sdimg_path} conv=notrunc seek=${data_start} conv=sparse
+
+# Platform specific cleanup
+case "${mender_platform}" in
+    "rpi-ubuntu" ) ;;
+    "pc-ubuntu"  ) ;;
+esac
 
 #pigz -f -9 -n ${sdimg_path}

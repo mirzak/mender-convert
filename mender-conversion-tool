@@ -162,7 +162,7 @@ ${application_dir}/convert-stage-2.sh ${stage_2_args}
 
 ${application_dir}/convert-stage-3.sh
 ${application_dir}/convert-stage-4.sh ${mender_platform}
-${application_dir}/convert-stage-99.sh ${mender_rootfs_part_size_mb} ${mender_data_part_size_mb} ${mender_image_alignment}
+${application_dir}/convert-stage-99.sh ${mender_rootfs_part_size_mb} ${mender_data_part_size_mb} ${mender_image_alignment} ${mender_platform}
 
 cleanup
 
