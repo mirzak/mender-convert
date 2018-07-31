@@ -169,13 +169,13 @@ rootfs_part_size=$(align_partition_size ${rootfs_part_size} ${image_alignment})
 data_part_size=$(align_partition_size ${data_part_size} ${image_alignment})
 
 boot_part_start=${image_alignment}
-boot_part_end=$(expr ${image_alignment} + ${boot_part_size})
-rootfsa_start=$(expr ${boot_part_end} + ${image_alignment})
-rootfsa_end=$(expr ${rootfsa_start} + ${rootfs_part_size})
-rootfsb_start=$(expr ${rootfsa_end} + ${image_alignment})
-rootfsb_end=$(expr ${rootfsb_start} + ${rootfs_part_size})
-data_start=$(expr ${rootfsb_end} + ${image_alignment})
-data_end=$(expr ${data_start} + ${data_part_size})
+boot_part_end=$(expr ${boot_part_start} + ${boot_part_size} - 1)
+rootfsa_start=$(expr ${boot_part_end} + ${image_alignment} + 1)
+rootfsa_end=$(expr ${rootfsa_start} + ${rootfs_part_size} - 1)
+rootfsb_start=$(expr ${rootfsa_end} + ${image_alignment} + 1)
+rootfsb_end=$(expr ${rootfsb_start} + ${rootfs_part_size} - 1)
+data_start=$(expr ${rootfsb_end} + ${image_alignment} + 1)
+data_end=$(expr ${data_start} + ${data_part_size} - 1)
 
 echo "rootfsa_start: ${rootfsa_start}"
 echo "rootfsb_start: ${rootfsb_start}"
