@@ -40,8 +40,6 @@ align_partition_size() {
   echo $lsize
 }
 
-echo "Running: $(basename $0)"
-
 if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ]; then
     echo "Usage:"
     echo "    $(basename $0) < rootfs part size > < data part size > < image-alignment > < platform >"
@@ -203,10 +201,82 @@ dd if=${output_dir}/rootfs.ext4 of=${sdimg_path} conv=notrunc seek=${rootfsa_sta
 dd if=${output_dir}/rootfs.ext4 of=${sdimg_path} conv=notrunc seek=${rootfsb_start} conv=sparse
 dd if=${output_dir}/data.ext4 of=${sdimg_path} conv=notrunc seek=${data_start} conv=sparse
 
+declare -a mappings
+
+add_partition_mappings() {
+    if [[ -n "$1" ]]; then
+        mapfile -t mappings < <( sudo -S kpartx -v -a $1 | grep 'loop' | cut -d' ' -f3 )
+        [[ ${#mappings[@]} -eq 0 ]] && \
+            { echo "Error: partition mappings failed. Aborting."; exit 1; } || \
+                { echo "Mapped ${#mappings[@]} partition(s)."; }
+    else
+        echo "Error: no device passed. Aborting."
+        exit 1
+    fi
+
+    sudo -S partprobe /dev/${mappings[0]%p*}
+}
+
+detach_mappings() {
+    if [[ -z "$1" ]]; then
+        echo "Error: no device passed. Aborting."
+        exit 1
+    fi
+        
+    for mapping in ${mappings[@]}
+    do
+        map_dev=/dev/mapper/"$mapping"
+        is_mounted=`grep ${map_dev} /proc/self/mounts | wc -l`
+        if [ ${is_mounted} -ne 0 ]; then
+            echo "Unmounting detected mounted mapping: $mapping"
+            sudo -S umount -l $map_dev
+        fi
+    done
+
+    mapper=${mappings[0]%p*}
+    echo "Detach mappings: /dev/$mapper"
+    sudo -S kpartx -d /dev/$mapper &
+    sudo -S losetup -d /dev/$mapper &
+    wait
+    sudo -S kpartx -d $1
+}
+
+pc_ubuntu_cleanup() {
+    #
+    # Mount the rootfs and boot partitions and install grub
+    #
+    MNT=${output_dir}/mnt-output
+    mkdir ${MNT}
+    add_partition_mappings ${sdimg_path}
+
+    sudo -S mount /dev/mapper/${mappings[1]} ${MNT}
+    sudo -S mount /dev/mapper/${mappings[0]} ${MNT}/boot/grub
+    for i in /dev /dev/pts /proc /sys /run; do
+        sudo mount -B $i ${MNT}/$i
+    done
+
+    set -x
+    sudo chroot ${MNT} grub-install --target=i386-pc \
+         --modules "boot linux ext2 fat serial part_msdos part_gpt normal \
+			iso9660 configfile search loadenv test cat echo \
+			gcry_sha256 halt hashsum loadenv reboot biosdisk \
+			serial terminal" \
+         /dev/${mappings[0]%p*}
+    set +x
+
+    for i in /dev/pts /dev /proc /sys /run; do
+        sudo umount ${MNT}/$i
+    done
+    sudo -S umount ${MNT}/boot/grub
+    sudo -S umount ${MNT}
+
+    detach_mappings ${sdimg_path}
+}
+
 # Platform specific cleanup
 case "${mender_platform}" in
     "rpi-ubuntu" ) ;;
-    "pc-ubuntu"  ) ;;
+    "pc-ubuntu"  ) pc_ubuntu_cleanup;;
 esac
 
 #pigz -f -9 -n ${sdimg_path}
