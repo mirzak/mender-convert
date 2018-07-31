@@ -78,6 +78,12 @@ actual_rootfs_size=$(sudo du -s --block-size=512 ${output_dir}/rootfs | awk '{ p
 # 20 % free space, not to be confused with rootfs_part_size
 rootfs_size=$(awk -v r1="$actual_rootfs_size" 'BEGIN{printf "%.0f", r1 * 1.20}')
 
+if [ ${rootfs_size} -gt ${rootfs_part_size} ]; then
+    echo "Error.  Specified partition size ${rootfs_part_size} is too small."
+    echo "The original filesystem requires ${rootfs_size} blocks."
+    exit 1
+fi
+
 echo "Creating a ext4 file-system image from modified root file-system"
 dd if=/dev/zero of=${output_dir}/rootfs.ext4 seek=${rootfs_size} count=0 bs=512 status=none conv=sparse
 
