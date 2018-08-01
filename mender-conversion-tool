@@ -37,6 +37,7 @@ Usage: $(basename $0) options (:hc:d:i:m:n:o:s:t:R:)
     -n - Mender artifact_name (/etc/mender/artifact_name)
     -o - Demo mode, takes demo server IP address as an argument
     -s - Server URL (Only for Mender Production setup)
+    -S - Swap partition size in MB
     -t - File containing Hosted Mender token (Hosted Mender mode)
     -R - Root file-system partition size in MB
     -p - Platform (currently either rpi-ubuntu or pc-ubuntu)
@@ -58,11 +59,12 @@ promptYN() {
 
 mender_rootfs_part_size_mb=1024
 mender_data_part_size_mb=256
+mender_swap_part_size_mb=0
 mender_platform="rpi-ubuntu"
 
 [ $# -eq 0 ] && usage
 
-while getopts ":hc:d:D:i:m:n:o:p:s:t:R:" arg; do
+while getopts ":hc:d:D:i:m:n:o:p:s:S:t:R:" arg; do
     case $arg in
     c) # Mender Production server certificate
         mender_production_cert=${OPTARG}
@@ -99,6 +101,10 @@ while getopts ":hc:d:D:i:m:n:o:p:s:t:R:" arg; do
     s) # Server URL
         mender_production_url=${OPTARG}
         echo "Mender Production URL: ${mender_production_url}"
+        ;;
+    S) # Swap partition size
+        mender_swap_part_size_mb=${OPTARG}
+        echo "Swap partition size (MB): ${mender_swap_part_size_mb}"
         ;;
     t) # Hosted Mender token
         mender_hosted_token=${OPTARG}
@@ -161,8 +167,8 @@ eval set -- " ${stage_2_args}"
 ${application_dir}/convert-stage-2.sh ${stage_2_args}
 
 ${application_dir}/convert-stage-3.sh
-${application_dir}/convert-stage-4.sh ${mender_platform}
-${application_dir}/convert-stage-99.sh ${mender_rootfs_part_size_mb} ${mender_data_part_size_mb} ${mender_image_alignment} ${mender_platform}
+${application_dir}/convert-stage-4.sh ${mender_swap_part_size_mb} ${mender_platform}
+${application_dir}/convert-stage-99.sh ${mender_rootfs_part_size_mb} ${mender_data_part_size_mb} ${mender_swap_part_size_mb} ${mender_image_alignment} ${mender_platform}
 
 cleanup
 
