@@ -131,8 +131,18 @@ if [ ! -e ${mender_binary} ]; then
 fi
 
 case ${mender_platform} in
-    "rpi-ubuntu" ) mender_image_alignment="24576";;
-    "pc-ubuntu" ) mender_image_alignment="2048";;
+    "rpi-ubuntu" )
+        mender_image_alignment="24576"
+        mender_rootfsA="/dev/mmcblk2"
+        mender_rootfsB="/dev/mmcblk3"
+        ;;
+
+    "pc-ubuntu" )
+        mender_image_alignment="2048"
+        mender_rootfsA="/dev/sda2"
+        mender_rootfsB="/dev/sda3"
+        ;;
+
     * )
         echo "Error.  Unrecognized platform ${mender_platform}"
         usage
@@ -140,7 +150,7 @@ case ${mender_platform} in
 esac
 
 stage_2_args="-a ${artifact_name} -d ${output_dir}/data -m ${mender_binary} \
-    -r ${output_dir}/rootfs -t ${device_type}"
+    -r ${output_dir}/rootfs -t ${device_type} -A ${mender_rootfsA} -B ${mender_rootfsB}"
 
 if [ -n "${mender_hosted_token}" ]; then
     stage_2_args="${stage_2_args} -T ${mender_hosted_token}"

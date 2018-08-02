@@ -29,8 +29,10 @@ Mender executables, service and configuration files installer.
 
 Usage: $(basename $0) [options]
 
-    Options: [acdmorstT]
+    Options: [ABacdmorstT]
 
+        -A - Mender rootfsA device node
+        -B - Mender rootfsB device node
         -a - Mender artifact info
         -t - Device type, e.g raspberrypi3
         -d - Target data directory
@@ -43,7 +45,7 @@ Usage: $(basename $0) [options]
 
     Examples:
 
-        $(basename $0) -r rootfs-dir -d data-dir -m mender
+        $(basename $0) -A /dev/mmcblk0p2 -B /dev/mmcblk0p3 -r rootfs-dir -d data-dir -m mender
                 -a mender-image-1.4.0 -t beaglebone -s 192.168.10.2
 
 EOF
@@ -81,8 +83,8 @@ EOF
     "InventoryPollIntervalSeconds": ${mender_inventory_poll_interval_seconds},
     "RetryPollIntervalSeconds": ${mender_retry_poll_interval_seconds},
     "UpdatePollIntervalSeconds": ${mender_update_poll_interval_seconds},
-    "RootfsPartA": "/dev/mmcblk0p2",
-    "RootfsPartB": "/dev/mmcblk0p3",
+    "RootfsPartA": "${mender_rootfsA}",
+    "RootfsPartB": "${mender_rootfsB}",
     "ServerCertificate": "/etc/mender/server.crt",
     "ServerURL": "${server_url}",
     "TenantToken": "${tenant_token}"
@@ -190,6 +192,16 @@ do_add_mender() {
         show_help
     fi
 
+    if [ -z "${mender_rootfsA}" ]; then
+        echo "Mender rootfsA device node not set. Aborting."
+        show_help
+    fi
+
+    if [ -z "${mender_rootfsB}" ]; then
+        echo "Mender rootfsB device node not set. Aborting."
+        show_help
+    fi
+
     if [ -z "${mender}" ]; then
         echo "Mender client binary not set. Aborting."
         show_help
@@ -245,7 +257,7 @@ echo "Running: $(basename $0)"
 
 echo "args: $#"
 
-while getopts ":ha:c:d:m:o:r:s:t:T:" arg; do
+while getopts ":ha:A:B:c:d:m:o:r:s:t:T:" arg; do
     case $arg in
     o)
         mender_demo_ip=${OPTARG}
@@ -273,6 +285,12 @@ while getopts ":ha:c:d:m:o:r:s:t:T:" arg; do
         ;;
     a)
         artifact_name=${OPTARG}
+        ;;
+    A)
+        mender_rootfsA=${OPTARG}
+        ;;
+    B)
+        mender_rootfsB=${OPTARG}
         ;;
     h | *) # Display help.
         echo "unknown optargs ${arg}: ${OPTARG}"
