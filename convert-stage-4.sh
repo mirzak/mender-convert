@@ -136,6 +136,9 @@ EOF
     sudo mount -o loop ${output_dir}/boot.vfat ${output_dir}/boot/grub
     sudo rsync -aq --no-o --no-p --no-g --safe-links --delete ${application_dir}/pc-grub/ ${output_dir}/boot/grub/
     sudo umount ${output_dir}/boot/grub
+
+    echo "ENV_DIR = /boot/grub" > ${output_dir}/data/mender_grubenv.config
+    sudo ln -fs /data/mender_grubenv.config ${output_dir}/rootfs/etc/mender_grubenv.config
 }
 
 # Platform specific hacks
