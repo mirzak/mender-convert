@@ -165,7 +165,7 @@ if [ -n "${mender_demo_ip}" ]; then
 fi
 
 if [ -d ${output_dir} ]; then
-    [ "$(promptYN "Warning. ${output_dir} already exists and will be overwritten. OK? ")" = "y" ] || exit 0
+    [ "$(promptYN "Warning. ${output_dir} already exists and will be overwritten. OK? ")" = "y" ] || exit 1
 fi
 
 ${application_dir}/convert-stage-1.sh ${image_to_convert}
