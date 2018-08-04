@@ -179,6 +179,7 @@ dd if=/dev/zero of=${sdimg_path} bs=512 count=0 seek=${sdimg_size} conv=sparse
 boot_part_size=$(align_partition_size ${boot_part_size} ${image_alignment})
 rootfs_part_size=$(align_partition_size ${rootfs_part_size} ${image_alignment})
 data_part_size=$(align_partition_size ${data_part_size} ${image_alignment})
+[ ${swap_part_size} -ne 0 ] && swap_part_size=$(align_partition_size ${swap_part_size} ${image_alignment})
 
 boot_part_start=${image_alignment}
 boot_part_end=$(expr ${boot_part_start} + ${boot_part_size} - 1)
