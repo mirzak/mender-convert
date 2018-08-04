@@ -106,7 +106,7 @@ LABEL=data        /data      auto       defaults         0  0
 EOF
     if [ ${swap_part_size} -ne 0 ]; then
         cat <<- EOF >> $output_dir/fstab
-/dev/sda6         none       swap       sw               0  0
+/dev/sda5         none       swap       sw               0  0
 EOF
     fi
 

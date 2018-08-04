@@ -164,8 +164,8 @@ sdimg_size=$(expr ${image_alignment} \* ${number_of_partitions} + ${boot_part_si
 echo "Creating filesystem with :"
 echo "    Boot partition $(expr ${boot_part_size} / 2) KiB"
 echo "    RootFS         $(expr ${rootfs_part_size} / 2) KiB"
-echo "    Data           $(expr ${data_part_size} / 2) KiB"
 [ ${swap_part_size} -ne 0 ] && echo "    Swap           $(expr ${swap_part_size} / 2) KiB"
+echo "    Data           $(expr ${data_part_size} / 2) KiB"
 
 if [ ! -f ${output_dir}/boot.vfat ]; then
     echo "${output_dir}/boot.vfat: not found"
@@ -178,8 +178,8 @@ dd if=/dev/zero of=${sdimg_path} bs=512 count=0 seek=${sdimg_size} conv=sparse
 # Align sizes
 boot_part_size=$(align_partition_size ${boot_part_size} ${image_alignment})
 rootfs_part_size=$(align_partition_size ${rootfs_part_size} ${image_alignment})
-data_part_size=$(align_partition_size ${data_part_size} ${image_alignment})
 [ ${swap_part_size} -ne 0 ] && swap_part_size=$(align_partition_size ${swap_part_size} ${image_alignment})
+data_part_size=$(align_partition_size ${data_part_size} ${image_alignment})
 
 boot_part_start=${image_alignment}
 boot_part_end=$(expr ${boot_part_start} + ${boot_part_size} - 1)
@@ -194,10 +194,10 @@ else
     ext_start=$(expr ${rootfsb_end} + ${image_alignment} + 1)
     # Note that since the extended partition contains the data partition
     # rather than preceding it on the disk, we don't need to add 1 here.
-    data_start=$(expr ${ext_start} + ${image_alignment})
-    data_end=$(expr ${data_start} + ${data_part_size} - 1)
-    swap_start=$(expr ${data_end} + ${image_alignment} + 1)
+    swap_start=$(expr ${ext_start} + ${image_alignment})
     swap_end=$(expr ${swap_start} + ${swap_part_size} - 1)
+    data_start=$(expr ${swap_end} + ${image_alignment} + 1)
+    data_end=$(expr ${data_start} + ${data_part_size} - 1)
 fi
 
 echo "boot_start: ${boot_part_start}"
@@ -218,8 +218,8 @@ if [ ${swap_part_size} -eq 0 ]; then
     parted -s ${sdimg_path} -- unit s mkpart primary ext2 ${data_start} ${data_end}
 else
     parted -s ${sdimg_path} -- unit s mkpart extended ${ext_start} 100%
-    parted -s ${sdimg_path} -- unit s mkpart logical ext2 ${data_start} ${data_end}
     parted -s ${sdimg_path} -- unit s mkpart logical linux-swap ${swap_start} ${swap_end}
+    parted -s ${sdimg_path} -- unit s mkpart logical ext2 ${data_start} ${data_end}
 fi
 parted ${sdimg_path} print
 
@@ -300,7 +300,7 @@ pc_ubuntu_cleanup() {
 
 add_partition_mappings ${sdimg_path}
 if [ ${swap_part_size} -ne 0 ]; then
-    sudo mkswap /dev/mapper/${mappings[5]}
+    sudo mkswap /dev/mapper/${mappings[4]}
 fi
 
 # Platform specific cleanup
