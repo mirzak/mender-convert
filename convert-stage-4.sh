@@ -48,6 +48,14 @@ EOF
         echo "${cmdline} init=/usr/lib/raspi-config/init_resize.sh" > ${output_dir}/cmdline.txt
     fi
 
+    # Mask udisks2.service, otherwise it will mount the inactive part and we
+    # might write an update while it is mounted which often result in
+    # corruptions.
+    #
+    # TODO: Find a way to only blacklist mmcblk0pX devices instea of masking
+    # the service.
+    sudo ln -sf /dev/null ${output_dir}/rootfs/etc/systemd/system/udisks2.service
+
     # Extract Linux kernel and install to /boot directory on rootfs
     mcopy -i ${output_dir}/boot.vfat -s ::kernel7.img ${output_dir}/zImage
     sudo cp ${output_dir}/zImage ${output_dir}/rootfs/boot/
