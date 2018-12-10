@@ -1,12 +1,7 @@
 #!/bin/bash
 
-# Partition alignment value in bytes.
-declare -i partition_alignment
-# Boot partition storage offset in bytes.
-declare -i vfat_storage_offset
-
-PART_ALIGN_4MB=4194304
-PART_ALIGN_8MB=8388608
+# Partition alignment value in bytes (4MB).
+declare -i partition_alignment="4194304"
 
 # Number of required heads in a final image.
 declare -i -r heads=255
@@ -184,33 +179,6 @@ get_image_info() {
       { return 0; }
 }
 
-# Takes the following argument
-#  $1 - device type
-#
-# Calculates the following arguments:
-#  $2 - partition alignment
-#  $3 - vfat storage offset
-
-set_boot_part_alignment() {
-  local rvar_partition_alignment=$2
-  local rvar_vfat_storage_offset=$3
-
-  case "$1" in
-    "beaglebone")
-      local lvar_partition_alignment=${PART_ALIGN_8MB}
-      local lvar_vfat_storage_offset=$lvar_partition_alignment
-      ;;
-    "raspberrypi3")
-      local lvar_partition_alignment=${PART_ALIGN_4MB}
-      local lvar_uboot_env_size=$(( $lvar_partition_alignment * 2 ))
-      local lvar_vfat_storage_offset=$(( $lvar_partition_alignment + $lvar_uboot_env_size ))
-      ;;
-  esac
-
-  eval $rvar_partition_alignment="'$lvar_partition_alignment'"
-  eval $rvar_vfat_storage_offset="'$lvar_vfat_storage_offset'"
-}
-
 # Takes following arguments:
 #
 #  $1 - raw disk image path
@@ -291,20 +259,17 @@ align_partition_size() {
 # Takes following arguments:
 #
 #  $1 - raw_disk image
-#  $2 - partition alignment
-#  $3 - vfat storage offset
 #
 # Returns:
 #
-#  $4 - boot partition start offset (in sectors)
-#  $5 - boot partition size (in sectors)
-#  $6 - root filesystem partition size (in sectors)
-#  $7 - sector size (in bytes)
-#  $8 - number of detected partitions
+#  $2 - boot partition start offset (in sectors)
+#  $3 - boot partition size (in sectors)
+#  $4 - root filesystem start offset (in sectors)
+#  $5 - root filesystem partition size (in sectors)
+#  $6 - sector size (in bytes)
+#  $7 - number of detected partitions
 analyse_raw_disk_image() {
   local image=$1
-  local alignment=$2
-  local offset=$3
   local count=
   local sectorsize=
   local bootstart=
@@ -313,11 +278,12 @@ analyse_raw_disk_image() {
   local rootfssize=
   local bootflag=
 
-  local rvar_bootstart=$4
-  local rvar_bootsize=$5
-  local rvar_rootfssize=$6
-  local rvar_sectorsize=$7
-  local rvar_partitions=$8
+  local rvar_bootstart=$2
+  local rvar_bootsize=$3
+  local rvar_rootfsstart=$4
+  local rvar_rootfssize=$5
+  local rvar_sectorsize=$6
+  local rvar_partitions=$7
 
   get_image_info $image count sectorsize bootstart bootsize rootfsstart \
                  rootfssize bootflag
@@ -325,20 +291,21 @@ analyse_raw_disk_image() {
   [[ $? -ne 0 ]] && \
       { log "Error: invalid/unsupported raw disk image. Aborting."; exit 1; }
 
+  # Hackish way of saying that we only found one partition and we call it
+  # "boot part" but lets assign the same values to "rootfs part".
+  #
+  # get_image_info needs to be smarter and should return an array with part
+  # information. It should be a higher level decision what the parts actually
+  # are, and if get_image_info is able to provide this we can simply drop
+  # this function and call get_image_info directly.
   if [[ $count -eq 1 ]]; then
     rootfssize=$bootsize
-    # Default size of the boot partition: 16MiB.
-    bootsize=$(( (${alignment} * 2) / ${sectorsize} ))
+    rootfsstart=$bootstart
   fi
-
-  # Boot partition storage offset is defined from the top down.
-  bootstart=$(( ${offset} / ${sectorsize} ))
-
-  align_partition_size bootsize $sectorsize
-  align_partition_size rootfssize  $sectorsize
 
   eval $rvar_bootstart="'$bootstart'"
   eval $rvar_bootsize="'$bootsize'"
+  eval $rvar_rootfsstart="'$rootfsstart'"
   eval $rvar_rootfssize="'$rootfssize'"
   eval $rvar_sectorsize="'$sectorsize'"
   eval $rvar_partitions="'$count'"
@@ -400,23 +367,14 @@ create_mender_disk() {
 #  $2 - raw disk image size
 #  $3 - boot partition start offset
 #  $4 - boot partition size
-#  $5 - root filesystem partiotion size
+#  $5 - root file-system partition size
 #  $6 - data partition size
 #  $7 - sector size
 format_mender_disk() {
   local lfile=$1
   local lsize=$2
 
-#  if [ -z "$3" ]; then
-#    echo "Error: no root filesystem size provided"
-#    exit 1
-#  fi
-
-#  if [ -z "$2" ]; then
-#    size=$(sudo blockdev --getsize64 ${sdimg_file})
-#  else
-#    size=$2
-#  fi
+  log "\tGenerating MBR partition table image..."
 
   cylinders=$(( ${lsize} / ${heads} / ${sectors} / ${7} ))
   rootfs_size=$(( $5 - 1 ))
@@ -546,11 +504,14 @@ make_mender_disk_filesystem() {
     label=${mender_disk_partitions[${part_no} - 1]}
 
     if [[ part_no -eq 1 ]]; then
-      log "\tCreating MS-DOS filesystem for '$label' partition."
-      sudo mkfs.vfat -n ${label} $map_dev >> "$build_log" 2>&1
-    else
-      log "\tCreating ext4 filesystem for '$label' partition."
-      sudo mkfs.ext4 -L ${label} $map_dev >> "$build_log" 2>&1
+      log "\tWriting boot part..."
+      dd if=${output_dir}/boot.img of=$map_dev >> "$build_log" 2>&1
+    elif [[ part_no -eq 2 ]]; then
+      log "\tWriting file-system part..."
+      dd if=${output_dir}/rootfs.img of=$map_dev >> "$build_log" 2>&1
+    elif [[ part_no -eq 4 ]]; then
+      log "\tWriting data part..."
+      dd if=${output_dir}/data.img of=$map_dev >> "$build_log" 2>&1
     fi
   done
 }
@@ -650,30 +611,21 @@ extract_file_from_image() {
 # Takes following arguments
 #
 #  $1 - device type
-#  $2 - partition alignment in bytes
-#  $3 - boot partition storage offset in bytes
-#  $4 - boot partition size in sectors
-#  $5 - rootfs partition size in sectors
-#  $6 - data partition size in sectors
-#  $7 - complete image size in bytes
-#  $8 - sector size in bytes
+#  $2 - boot partition storage offset in bytes
+#  $3 - boot partition size in sectors
+#  $4 - rootfs partition size in sectors
+#  $5 - sector size in bytes
 
 create_test_config_file() {
   local device_type=$1
-  local alignment=$2
-  local boot_offset=$3
-  local boot_size_mb=$(( ((($4 * $8) / 1024) / 1024) ))
-  local rootfs_size_mb=$(( ((($5 * $8) / 1024) / 1024) ))
-  local data_size_mb=$(( ((($6 * $8) / 1024) / 1024) ))
-  local mender_image_size_mb=$(( (($7 / 1024) / 1024) ))
+  local boot_offset=$2
+  local boot_size_mb=$(( ((($3 * $5) / 1024) / 1024) ))
+  local rootfs_size_mb=$(( ((($4 * $5) / 1024) / 1024) ))
 
   cp ${files_dir}/variables.template ${output_dir}/${device_type}_variables.cfg
 
   sed -i '/^MENDER_BOOT_PART_SIZE_MB/s/=.*$/="'${boot_size_mb}'"/' ${output_dir}/${device_type}_variables.cfg
-  sed -i '/^MENDER_DATA_PART_SIZE_MB/s/=.*$/="'${data_size_mb}'"/' ${output_dir}/${device_type}_variables.cfg
   sed -i '/^MENDER_DEVICE_TYPE/s/=.*$/="'${device_type}'"/' ${output_dir}/${device_type}_variables.cfg
-  sed -i '/^MENDER_PARTITION_ALIGNMENT/s/=.*$/="'${alignment}'"/' ${output_dir}/${device_type}_variables.cfg
-  sed -i '/^MENDER_STORAGE_TOTAL_SIZE_MB/s/=.*$/="'${mender_image_size_mb}'"/' ${output_dir}/${device_type}_variables.cfg
   sed -i '/^MENDER_UBOOT_ENV_STORAGE_DEVICE_OFFSET/s/=.*$/="'${boot_offset}'"/' ${output_dir}/${device_type}_variables.cfg
   sed -i '/^MENDER_CALC_ROOTFS_SIZE/s/=.*$/="'${rootfs_size_mb}'"/' ${output_dir}/${device_type}_variables.cfg
   sed -i '/^MENDER_MACHINE/s/=.*$/="'${device_type}'"/' ${output_dir}/${device_type}_variables.cfg

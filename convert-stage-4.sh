@@ -7,11 +7,12 @@ Mender executables, service and configuration files installer.
 
 Usage: $0 [options]
 
-    Options: [-m|--mender-disk-image | -g|--mender-client | -a|--artifact-name |
-              -d|--device-type | -p|--demo-host-ip | -u| --server-url |
-              -t| --tenant-token]
+    Options: [-r|--rootfs-dir | -d|--data-dir | -g|--mender-client |
+              -a|--artifact-name | -D|--device-type | -p|--demo-host-ip |
+              -u| --server-url | -t| --tenant-token]
 
-        --mender-disk-image - Mender raw disk image
+        --rootfs-dir        - Path to target rootfs directory
+        --data-dir          - Path to target data directory
         --mender-client     - Mender client binary file
         --artifact-name     - artifact info
         --device-type       - target device type identification
@@ -32,8 +33,8 @@ EOF
   exit 1
 }
 
-tool_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-output_dir=${tool_dir}/output
+application_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+output_dir=${application_dir}/output
 
 mender_client_repo="https://raw.githubusercontent.com/mendersoftware/mender"
 mender_client_revision="1.6.x"
@@ -163,23 +164,13 @@ install_files() {
 
   sudo ln -sf /data/${databootdir}/fw_env.config ${primary_dir}/etc/fw_env.config
 
-  # Prepare 'primary' partition
-  [ ! -d "$primary_dir/data" ] && \
-      { log "\t'data' mountpoint missing. Adding"; \
-        sudo install -d -m 755 ${primary_dir}/data; }
+  sudo install -d -m 755 ${primary_dir}/data
 
-  case "$device_type" in
-    "beaglebone")
-      [ ! -d "$primary_dir/boot/efi" ] && \
-          { log "\t'/boot/efi' mountpoint missing. Adding"; \
-            sudo install -d -m 755 ${primary_dir}/boot/efi; }
-      ;;
-    "raspberrypi3")
-      [ ! -d "$primary_dir/uboot" ] && \
-          { log "\t'/uboot' mountpoint missing. Adding"; \
-            sudo install -d -m 755 ${primary_dir}/uboot; }
-      ;;
-  esac
+  # One of these will be unused depending on if the integration is running
+  # GRUB2 or U-boot. But lets avoid a conditional here as I do not see any
+  # harm in the existence of an empty directory.
+  sudo install -d -m 755 ${primary_dir}/boot/efi
+  sudo install -d -m 755 ${primary_dir}/uboot
 
   sudo install -d ${primary_dir}/${identitydir}
   sudo install -d ${primary_dir}/${inventorydir}
@@ -220,8 +211,13 @@ install_files() {
 }
 
 do_install_mender() {
-  if [ -z "${mender_disk_image}" ]; then
-    log "Mender raw disk image not set. Aborting."
+  if [ -z "${rootfs_dir}" ] || [ ! -d ${rootfs_dir} ]; then
+    log "Mender rootfs directory path not valid. Aborting."
+    show_help
+  fi
+
+  if [ -z "${data_dir}" ] || [ ! -d ${data_dir} ]; then
+    log "Mender data directory path not valid. Aborting."
     show_help
   fi
 
@@ -261,26 +257,8 @@ do_install_mender() {
     mender_server_url=${server_url}
   fi
 
-  [ ! -f $mender_disk_image ] && \
-      { log "$mender_disk_image - file not found. Aborting."; exit 1; }
-
-  # Mount rootfs partition A.
-  create_device_maps $mender_disk_image mender_disk_mappings
-
   # Change current directory to 'output' directory.
   cd $output_dir
-
-  primary=${mender_disk_mappings[1]}
-  data=${mender_disk_mappings[3]}
-
-  map_primary=/dev/mapper/"$primary"
-  map_data=/dev/mapper/"$data"
-  path_primary=$output_dir/sdimg/primary
-  path_data=$output_dir/sdimg/data
-  mkdir -p ${path_primary} ${path_data}
-
-  sudo mount ${map_primary} ${path_primary}
-  sudo mount ${map_data} ${path_data}
 
   # Get Mender client related files.
   get_mender_files_from_upstream
@@ -289,15 +267,9 @@ do_install_mender() {
   create_client_files
 
   # Create all required paths and install files.
-  install_files ${path_primary} ${path_data}
+  install_files ${rootfs_dir} ${data_dir}
 
-  # Back to working directory.
-  cd $tool_dir && sync
-
-  # Clean stuff.
-  detach_device_maps ${mender_disk_mappings[@]}
-  rm -rf $output_dir/sdimg
-  [[ $keep -eq 0 ]] && { rm -rf $mender_dir; }
+  sync
 
   log "\tDone."
 }
@@ -306,15 +278,19 @@ PARAMS=""
 
 while (( "$#" )); do
   case "$1" in
-    -m | --mender-disk-image)
-      mender_disk_image=$2
+    -r | --rootfs-dir)
+      rootfs_dir=$2
+      shift 2
+      ;;
+    -d | --data-dir)
+      data_dir=$2
       shift 2
       ;;
     -g | --mender-client)
       mender_client=$2
       shift 2
       ;;
-    -d | --device-type)
+    -D | --device-type)
       device_type=$2
       shift 2
       ;;
@@ -337,10 +313,6 @@ while (( "$#" )); do
     -t | --tenant-token)
       tenant_token=$2
       shift 2
-      ;;
-    -k | --keep)
-      keep="1"
-      shift 1
       ;;
     -h | --help)
       show_help
