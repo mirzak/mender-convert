@@ -20,6 +20,8 @@ RUN apt-get update && apt-get install -y \
     libtool \
     pkg-config \
     python \
+# To copy files between images
+    rsync \
 # for mender-convert to run (mkfs.vfat is required for boot partition)
     sudo \
     dosfstools \
