@@ -264,19 +264,17 @@ do_install_mender() {
 do_mender_data_part() {
   log "\tCreating a data part file-system image"
 
+  dd if=/dev/zero of=${output_dir}/data.img seek=${data_part_size_mb} count=0 bs=1M >> "$build_log" 2>&1
+
   # Extract file-system type from rootfs
   if file ${output_dir}/rootfs.img | grep -q ext4; then
-    data_file_extensions="ext4"
-  elif file ${output_dir}/rootfs.img | grep -q xfs; then
-    data_file_extensions="xfs"
+    sudo mkfs.ext4 -F ${output_dir}/data.img >> "$build_log" 2>&1
+  elif file ${output_dir}/rootfs.img | grep -q XFS; then
+    sudo mkfs.xfs -f ${output_dir}/data.img >> "$build_log" 2>&1
   else
     log "\tCould not determinate root file-system type. Aborting..."
     exit 1
   fi
-
-  dd if=/dev/zero of=${output_dir}/data.img seek=${data_part_size_mb} count=0 bs=1M >> "$build_log" 2>&1
-
-  sudo mkfs.${data_file_extensions} -F ${output_dir}/data.img >> "$build_log" 2>&1
 
   mkdir -p ${output_dir}/data-output
   sudo mount ${output_dir}/data.img ${output_dir}/data-output
