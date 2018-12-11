@@ -124,6 +124,10 @@ data_part_size_mb=128
 pdata_size=
 # Exemplary values for Beaglebone: 9.3: 4521984 9.4: 4423680
 prootfs_size=
+# Partition type, e.g:
+#    83 (Linux native partition)
+#    8e (Linux Logical Volume Manager partition)
+prootfs_id=
 
 mender_disk_image=
 raw_disk_image=
@@ -186,7 +190,8 @@ do_raw_extract_images() {
   mender_rootfs_image=${output_dir}/rootfs.img
 
   analyse_raw_disk_image ${raw_disk_image} pboot_start pboot_size \
-                         prootfs_start prootfs_size sector_size raw_disk_counts
+                         prootfs_start prootfs_size sector_size \
+                         raw_disk_counts prootfs_id
 
   [ -z "${prootfs_size}" ] && \
     { log "root filesystem size not set. Aborting."; return 1; }

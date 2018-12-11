@@ -127,6 +127,7 @@ EOF
 #  $6 - root filesystem partition start offset (in sectors)
 #  $7 - root filesystem partition size (in sectors)
 #  $8 - boot flag
+#  $9 - id (type) of the second partition (root)
 get_image_info() {
   local limage=$1
   local rvar_count=$2
@@ -136,6 +137,7 @@ get_image_info() {
   local rvar_rootfsstart=$6
   local rvar_rootfssize=$7
   local rvar_bootflag=$8
+  local rvar_rootid=$9
 
   local lbootsize=0
   local lsubname=${limage:0:8}
@@ -150,11 +152,13 @@ get_image_info() {
 
   idx_start=2
   idx_size=4
+  idx_id=6
 
   if [[ $lcount -gt 1 ]]; then
     local lsecondpartinfo="$(echo "${lfdisk}" | grep "^${lparts[1]}")"
     local lsecondpartstart=($(echo "${lsecondpartinfo}" | tr -s ' ' | cut -d' ' -f${idx_start}))
     local lsecondpartsize=($(echo "${lsecondpartinfo}" | tr -s ' ' | cut -d' ' -f${idx_size}))
+    local lsecondpartid=($(echo "${lsecondpartinfo}" | tr -s ' ' | cut -d' ' -f${idx_id}))
   fi
 
   eval $rvar_bootflag="0"
@@ -173,6 +177,7 @@ get_image_info() {
   eval $rvar_bootsize="'$lfirstpartsize'"
   eval $rvar_rootfsstart="'$lsecondpartstart'"
   eval $rvar_rootfssize="'$lsecondpartsize'"
+  eval $rvar_rootid="'${lsecondpartid}'"
 
   [[ $lcount -gt 2 ]] && \
       { log "Unsupported type of source image. Aborting."; return 1; } || \
@@ -268,6 +273,7 @@ align_partition_size() {
 #  $5 - root filesystem partition size (in sectors)
 #  $6 - sector size (in bytes)
 #  $7 - number of detected partitions
+#  $8 - id (type) of the second partition (root)
 analyse_raw_disk_image() {
   local image=$1
   local count=
@@ -276,6 +282,7 @@ analyse_raw_disk_image() {
   local bootsize=
   local rootfsstart=
   local rootfssize=
+  local rootid=
   local bootflag=
 
   local rvar_bootstart=$2
@@ -284,9 +291,10 @@ analyse_raw_disk_image() {
   local rvar_rootfssize=$5
   local rvar_sectorsize=$6
   local rvar_partitions=$7
+  local rvar_rootfsid=$8
 
   get_image_info $image count sectorsize bootstart bootsize rootfsstart \
-                 rootfssize bootflag
+                 rootfssize bootflag rootid
 
   [[ $? -ne 0 ]] && \
       { log "Error: invalid/unsupported raw disk image. Aborting."; exit 1; }
@@ -309,6 +317,7 @@ analyse_raw_disk_image() {
   eval $rvar_rootfssize="'$rootfssize'"
   eval $rvar_sectorsize="'$sectorsize'"
   eval $rvar_partitions="'$count'"
+  eval $rvar_rootfsid="'$rootid'"
 }
 
 # Takes following arguments:
