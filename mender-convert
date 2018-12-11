@@ -243,28 +243,28 @@ do_install_mender() {
 
   mkdir -p ${output_dir}/data ${output_dir}/rootfs
 
-  stage_4_args="-r ${output_dir}/rootfs -d ${output_dir}/data -D ${device_type} \
+  mender_files_args="-r ${output_dir}/rootfs -d ${output_dir}/data -D ${device_type} \
                 -g ${mender_client} -a ${artifact_name}"
 
   if [ -n "$demo_host_ip" ]; then
-    stage_4_args="${stage_4_args} -i ${demo_host_ip}"
+    mender_files_args="${mender_files_args} -i ${demo_host_ip}"
   fi
 
   if [ -n "$server_cert" ]; then
-    stage_4_args="${stage_4_args} -c ${server_cert}"
+    mender_files_args="${mender_files_args} -c ${server_cert}"
   fi
 
   if [ -n "$server_url" ]; then
-    stage_4_args="${stage_4_args} -u ${server_url}"
+    mender_files_args="${mender_files_args} -u ${server_url}"
   fi
 
   if [ -n "${tenant_token}" ]; then
-    stage_4_args="${stage_4_args} -t ${tenant_token}"
+    mender_files_args="${mender_files_args} -t ${tenant_token}"
   fi
 
-  eval set -- " ${stage_4_args}"
+  eval set -- " ${mender_files_args}"
 
-  ${tool_dir}/convert-stage-4.sh ${stage_4_args}
+  ${tool_dir}/convert-generic-mender-files.sh ${mender_files_args}
 
   # Update test configuration file
   update_test_config_file $device_type artifact-name $artifact_name
