@@ -20,6 +20,18 @@ bootloader_toolchain=$1
 platform_arch="unknown"
 platform_type="unknown"
 
+util_find_kernel_image() {
+  kernel_image_path=""
+  for image in vmlinuz zImage bzImage; do
+      kernel_image_path=$(sudo find ${1} -name ${image}* ! -name '*-rescue-*')
+
+      if [ -n "${kernel_image_path}" ]; then
+        break
+      fi
+  done
+  echo -n ${kernel_image_path}
+}
+
 # Yes, I know!
 generic_raspberrypi() {
   ${application_dir}/convert-platform-rpi.sh ${bootloader_toolchain}
@@ -93,15 +105,26 @@ generic() {
   # Linux kernel version to the image type/name, e.g:
   #
   #    vmlinuz-4.14-x86_64
+  #    vmlinuz-3.10.0-862.el7.x86_64
   #
-  for image in vmlinuz zImage bzImage; do
-    kernel_imagetype=$(basename $(find ${target_rootfs_dir}/boot -name ${image}*))
-
-    if [ ! -z "${kernel_imagetype}" ]; then
-      log "\tFound Linux kernel image: ${kernel_imagetype}"
-      break
+  kernel_imagetype=""
+  for boot in ${target_boot_dir} ${target_rootfs_dir}; do
+    kernel_imagetype=$(util_find_kernel_image ${boot})
+    if [ -n "${kernel_imagetype}" ] && [ "${boot}" == "${target_boot_dir}" ]; then
+      sudo cp ${kernel_imagetype} ${target_rootfs_dir}/boot
+      break;
+    elif [ -n "${kernel_imagetype}" ]; then
+      break;
     fi
   done
+
+  if [ -z "${kernel_imagetype}" ]; then
+    log "\tCould not find the Linux kernel image. Aborting..."
+    exit 1
+  fi
+
+  kernel_imagetype=$(basename ${kernel_imagetype})
+  log "\tFound Linux kernel image: \n\n\t${kernel_imagetype}\n"
 
   sed -i '/^kernel_imagetype/s/=.*$/='${kernel_imagetype}'/' mender_grubenv_defines
 
