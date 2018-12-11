@@ -570,9 +570,8 @@ mount_mender_disk() {
 #  $3 - size (in 512 blocks)
 
 extract_file_from_image() {
-  local cmd="dd if=$1 of=${output_dir}/$4 skip=$2 bs=512 count=$3 conv=sparse "
-  log "\t${cmd}"
-  $(${cmd}>> "$build_log" 2>&1)
+  local cmd="dd if=$1 of=${output_dir}/$4 skip=$2 bs=512 count=$3 conv=sparse"
+  $(${cmd} >> "$build_log" 2>&1)
 }
 
 extract_root_from_lvm() {
@@ -591,7 +590,6 @@ extract_root_from_lvm() {
     sudo vgchange -a y ${vg_name} >> "$build_log" 2>&1
 
     local cmd="dd if=/dev/${vg_name}/root of=${output_dir}/${target} conv=sparse"
-    log "\t${cmd}"
     $(${cmd} >> "$build_log" 2>&1)
 
     sudo vgchange -a n ${vg_name} >> "$build_log" 2>&1
