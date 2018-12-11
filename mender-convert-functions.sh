@@ -556,49 +556,6 @@ mount_mender_disk() {
 
 # Takes following arguments
 #
-#  $1 - device type
-set_fstab() {
-  local mountpoint=
-  local device_type=$1
-  local sysconfdir="$sdimg_primary_dir/etc"
-
-  [ ! -d "${sysconfdir}" ] && { log "Error: cannot find rootfs config dir."; exit 1; }
-
-  # Erase/create the fstab file.
-  sudo install -b -m 644 /dev/null ${sysconfdir}/fstab
-
-  case "$device_type" in
-    "beaglebone")
-      mountpoint="/boot/efi"
-      ;;
-    "raspberrypi3")
-      mountpoint="/uboot"
-      ;;
-  esac
-
-  # Add Mender specific entries to fstab.
-  sudo bash -c "cat <<- EOF > ${sysconfdir}/fstab
-	# stock fstab - you probably want to override this with a machine specific one
-
-	/dev/root            /                    auto       defaults              1  1
-	proc                 /proc                proc       defaults              0  0
-	devpts               /dev/pts             devpts     mode=0620,gid=5       0  0
-	tmpfs                /run                 tmpfs      mode=0755,nodev,nosuid,strictatime 0  0
-	tmpfs                /var/volatile        tmpfs      defaults              0  0
-
-	# uncomment this if your device has a SD/MMC/Transflash slot
-	#/dev/mmcblk0p1       /media/card          auto       defaults,sync,noauto  0  0
-
-	# Where the U-Boot environment resides; for devices with SD card support ONLY!
-	/dev/mmcblk0p1   $mountpoint          auto       defaults,sync    0  0
-	/dev/mmcblk0p4   /data                auto       defaults         0  0
-	EOF"
-
-  log "\tDone."
-}
-
-# Takes following arguments
-#
 #  $1 - path to source raw disk image
 #  $2 - sector start (in 512 blocks)
 #  $3 - size (in 512 blocks)

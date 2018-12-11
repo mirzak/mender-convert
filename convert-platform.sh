@@ -49,6 +49,24 @@ generic_arm() {
   log "\tInstalling GRUB2 EFI "
   sudo install -d ${target_boot_dir}/EFI/BOOT
   sudo install -m 0644 ${files_dir}/efi-arm/grub-efi-bootarm.efi ${target_boot_dir}/EFI/BOOT/grub.efi
+
+  # Erase/create the fstab file.
+  sudo install -b -m 644 /dev/null ${target_rootfs_dir}/etc/fstab
+
+  # Add Mender specific entries to fstab.
+  cat <<- EOF > ${target_rootfs_dir}/etc/fstab
+# stock fstab - you probably want to override this with a machine specific one
+
+/dev/root            /                    auto       defaults              1  1
+debugfs              /sys/kernel/debug    debugfs    defaults              0  0
+proc                 /proc                proc       defaults              0  0
+devpts               /dev/pts             devpts     mode=0620,gid=5       0  0
+tmpfs                /run                 tmpfs      mode=0755,nodev,nosuid,strictatime 0  0
+tmpfs                /var/volatile        tmpfs      defaults              0  0
+
+/dev/mmcblk0p1   /boot/efi            auto       defaults,sync    0  0
+/dev/mmcblk0p4   /data                auto       defaults         0  0
+EOF
 }
 
 generic() {

@@ -113,5 +113,19 @@ sudo ln -fs /uboot/config.txt ${target_rootfs_dir}/boot/config.txt
 sudo install -m 755 ${files_dir}/init_resize.sh \
     ${target_rootfs_dir}/usr/lib/raspi-config/init_resize.sh
 
+ # Add Mender specific entries to fstab.
+cat <<- EOF > ${target_rootfs_dir}/etc/fstab
+# stock fstab - you probably want to override this with a machine specific one
+
+/dev/root            /                    auto       defaults              1  1
+debugfs              /sys/kernel/debug    debugfs    defaults              0  0
+proc                 /proc                proc       defaults              0  0
+devpts               /dev/pts             devpts     mode=0620,gid=5       0  0
+tmpfs                /run                 tmpfs      mode=0755,nodev,nosuid,strictatime 0  0
+tmpfs                /var/volatile        tmpfs      defaults              0  0
+
+/dev/mmcblk0p1   /uboot                   auto       defaults,sync    0  0
+/dev/mmcblk0p4   /data                    auto       defaults         0  0
+EOF
 
 build_and_install_uboot_files ${bootloader_toolchain}
