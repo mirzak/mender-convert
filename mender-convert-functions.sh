@@ -575,6 +575,29 @@ extract_file_from_image() {
   $(${cmd}>> "$build_log" 2>&1)
 }
 
+extract_root_from_lvm() {
+    local image=$1
+    local target=$2
+
+    local available_loop=$(losetup -f)
+
+    # Map LVM volume group to free loop device
+    losetup ${available_loop} ${image} >> "$build_log" 2>&1
+
+    # Find out the name of the LVM volume group
+    vg_name=$(sudo pvs -t 2>/dev/null | grep ${available_loop} | awk '{print $2}')
+
+    # Active it!
+    sudo vgchange -a y ${vg_name} >> "$build_log" 2>&1
+
+    local cmd="dd if=/dev/${vg_name}/root of=${output_dir}/${target} conv=sparse"
+    log "\t${cmd}"
+    $(${cmd} >> "$build_log" 2>&1)
+
+    sudo vgchange -a n ${vg_name} >> "$build_log" 2>&1
+    sudo losetup -d ${available_loop} >> "$build_log" 2>&1
+}
+
 # Takes following arguments
 #
 #  $1 - device type
