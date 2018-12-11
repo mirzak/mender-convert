@@ -506,13 +506,13 @@ make_mender_disk_filesystem() {
 
     if [[ part_no -eq 1 ]]; then
       log "\tWriting boot part..."
-      dd if=${output_dir}/boot.img of=$map_dev >> "$build_log" 2>&1
+      dd if=${output_dir}/boot.img of=$map_dev conv=sparse >> "$build_log" 2>&1
     elif [[ part_no -eq 2 ]]; then
       log "\tWriting file-system part..."
-      dd if=${output_dir}/rootfs.img of=$map_dev >> "$build_log" 2>&1
+      dd if=${output_dir}/rootfs.img of=$map_dev conv=sparse >> "$build_log" 2>&1
     elif [[ part_no -eq 4 ]]; then
       log "\tWriting data part..."
-      dd if=${output_dir}/data.img of=$map_dev >> "$build_log" 2>&1
+      dd if=${output_dir}/data.img of=$map_dev conv=sparse >> "$build_log" 2>&1
     fi
   done
 }
@@ -561,7 +561,7 @@ mount_mender_disk() {
 #  $3 - size (in 512 blocks)
 
 extract_file_from_image() {
-  local cmd="dd if=$1 of=${output_dir}/$4 skip=$2 bs=512 count=$3"
+  local cmd="dd if=$1 of=${output_dir}/$4 skip=$2 bs=512 count=$3 conv=sparse "
   log "\t${cmd}"
   $(${cmd}>> "$build_log" 2>&1)
 }
