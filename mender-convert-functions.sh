@@ -355,10 +355,11 @@ unmount_partitions() {
 create_mender_disk() {
   local lfile=$1
   local lsize=$2
-  local bs=$(( 1024*1024 ))
-  local count=$(( ${lsize} / ${bs} ))
 
-  dd if=/dev/zero of=${lfile} bs=${bs} count=${count}>> "$build_log" 2>&1
+  log "\tGenerating a blank image..."
+
+  # Generates a sparse image
+  dd if=/dev/zero of=${lfile} seek=${lsize} bs=1 count=0 >> "$build_log" 2>&1
 }
 
 # Takes following arguments:
