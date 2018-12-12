@@ -347,6 +347,22 @@ calculate_mender_disk_size() {
 }
 
 # Takes following arguments:
+#  $1 - aligned root filesystem partition size (in sectors)
+#  $2 - aligned data partition size (in sectors)
+#  $3 - aligned swap partition size (in sectors)
+#  $4 - sector size (in bytes)
+#
+#  Returns:
+#  $5 - final LVM volume group size (in bytes)
+calculate_mender_lvm_vg_size() {
+  local rvar_lvm_lg_size=$5
+
+  # One extra block for LVM overhead
+  local lvm_lg_size=$(( ((2 * $1) + $2 + $3) * $4 + $partition_alignment ))
+  eval $rvar_lvm_lg_size="'$lvm_lg_size'"
+}
+
+# Takes following arguments:
 #
 #  $1 - raw disk image
 unmount_partitions() {
@@ -369,6 +385,31 @@ create_mender_disk() {
 
   # Generates a sparse image
   dd if=/dev/zero of=${lfile} seek=${lsize} bs=1 count=0 >> "$build_log" 2>&1
+}
+
+# Takes following arguments:
+#
+#  $1 - raw disk image path
+#  $2 - boot partition start offset
+#  $3 - boot partition size
+format_mender_lvm_disk() {
+# man sfdisk.8
+#...
+# sfdisk reads lines of the form
+#     <start> <size> <id> <bootable> <c,h,s> <c,h,s>
+#
+# where each line fills one partition descriptor.
+#
+# ....
+#
+# The <c,h,s> parts can (and probably should) be omitted
+#
+# ...
+# Bootable is specified as [*|-], with as default not-bootable
+#
+# The second part uses defaults for size, meaning that it will occupy
+# remaining available space.
+ printf "2048,2099199,83,* \n ,,8e,, \n" | sfdisk $1
 }
 
 # Takes following arguments:
@@ -498,6 +539,34 @@ detach_device_maps() {
   sudo kpartx -d /dev/$mapper &
   sudo losetup -d /dev/$mapper &
   wait && sync
+}
+
+make_mender_lvm_filesystem() {
+  log "\tWriting file-system part..."
+  dd if=${output_dir}/rootfs.img of=/dev/mender/rootfsa conv=sparse >> "$build_log" 2>&1
+  log "\tWriting data part..."
+  dd if=${output_dir}/data.img of=/dev/mender/data conv=sparse >> "$build_log" 2>&1
+}
+
+# Takes following arguments:
+#
+#  $1 - partition mappings holder
+make_mender_lvm_disk() {
+  local mappings=($@)
+
+  for mapping in ${mappings[@]}
+  do
+    map_dev=/dev/mapper/"$mapping"
+    part_no=$(get_part_number_from_device $map_dev)
+
+    if [[ part_no -eq 1 ]]; then
+      log "\tWriting boot part..."
+      dd if=${output_dir}/boot.img of=$map_dev conv=sparse >> "$build_log" 2>&1
+    elif [[ part_no -eq 2 ]]; then
+      log "\tWriting LVM..."
+      dd if=${output_dir}/vg.img of=$map_dev conv=sparse >> "$build_log" 2>&1
+    fi
+  done
 }
 
 # Takes following arguments:
