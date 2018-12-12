@@ -277,9 +277,9 @@ do_mender_data_part() {
 
   # Extract file-system type from rootfs
   if file ${output_dir}/rootfs.img | grep -q ext4; then
-    sudo mkfs.ext4 -F ${output_dir}/data.img >> "$build_log" 2>&1
+    mkfs.ext4 -F ${output_dir}/data.img >> "$build_log" 2>&1
   elif file ${output_dir}/rootfs.img | grep -q XFS; then
-    sudo mkfs.xfs -f ${output_dir}/data.img >> "$build_log" 2>&1
+    mkfs.xfs -f ${output_dir}/data.img >> "$build_log" 2>&1
   else
     log "\tCould not determinate root file-system type. Aborting..."
     exit 1
