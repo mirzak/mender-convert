@@ -583,6 +583,11 @@ extract_root_from_lvm() {
     # Map LVM volume group to free loop device
     losetup ${available_loop} ${image} >> "$build_log" 2>&1
 
+    # It seems that we can reach pvs output without our parts being registered.
+    # losetup does not have a "wait" flag, waiting one seconds seems to cover it
+    # for now.
+    sleep 1
+
     # Find out the name of the LVM volume group
     vg_name=$(sudo pvs -t 2>/dev/null | grep ${available_loop} | awk '{print $2}')
 
