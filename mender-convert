@@ -334,29 +334,87 @@ do_mender_disk_image() {
     return 1
   fi
 
-  local mender_disk_image_size=
-  calculate_mender_disk_size $pboot_start $pboot_size  \
+  # In case of LVM, we will create rootfsA, rootfsB and data as LVM volumes
+  # instead of partitions.
+  if [ -e ${output_dir}/lvm.img ]; then
+    local rootfs_size_aligned=${prootfs_size}
+    align_partition_size rootfs_size_aligned ${sector_size}
+
+    local data_size_aligned=$(( (${data_part_size_mb} * 1024 * 1024) / ${sector_size} ))
+    align_partition_size data_size_aligned ${sector_size}
+
+    # 1.5 G in 512 blocks algiend to 4M
+    # TODO: Calcuate or configuration option
+    swap_size_aligned=2883584
+
+    local mender_lvm_vg_size=
+    calculate_mender_lvm_vg_size ${rootfs_size_aligned} \
+                                 ${data_size_aligned} \
+                                 ${swap_size_aligned} \
+                                 ${sector_size} \
+                                 mender_lvm_vg_size
+
+    log "\tCreating Mender LVM volume group: \
+       \n\t\timage size: ${mender_lvm_vg_size} bytes \
+       \n\t\troot filesystem size: $((${rootfs_size_aligned} * $sector_size)) bytes \
+       \n\t\tdata partition size: $((${data_size_aligned} * $sector_size)) bytes \
+       \n\t\tswap partition size: $((${swap_size_aligned} * $sector_size)) bytes"
+
+    dd if=/dev/zero of=${output_dir}/vg.img seek=${mender_lvm_vg_size} bs=1 count=0 >> "$build_log" 2>&1
+
+    local available_loop=$(losetup -f)
+    losetup ${available_loop} ${output_dir}/vg.img >> "$build_log" 2>&1
+    sudo pvcreate -y -ff ${available_loop} >> "$build_log" 2>&1
+    sudo vgcreate mender ${available_loop} >> "$build_log" 2>&1
+
+    sudo lvcreate -y --size ${rootfs_size_aligned}S --name rootfsa mender >> "$build_log" 2>&1
+    sudo lvcreate -y --size ${rootfs_size_aligned}S --name rootfsb mender >> "$build_log" 2>&1
+    sudo lvcreate -y --size ${data_size_aligned}S --name data mender >> "$build_log" 2>&1
+    sudo lvcreate -y --size ${swap_size_aligned}S --name swap mender >> "$build_log" 2>&1
+
+    mkswap /dev/mender/swap >> "$build_log" 2>&1
+
+    make_mender_lvm_filesystem
+
+    sudo vgchange -a n mender >> "$build_log" 2>&1
+    losetup -d ${available_loop} >> "$build_log" 2>&1
+
+    local mender_disk_image_size=$((${pboot_size} + ${mender_lvm_vg_size}))
+
+    create_mender_disk $mender_disk_image $mender_disk_image_size
+    format_mender_lvm_disk $mender_disk_image $pboot_start $pboot_size
+
+    create_device_maps $mender_disk_image mender_disk_mappings
+
+    log "$step/$total Formatting repartitioned raw disk image..."
+    ((step++))
+    make_mender_lvm_disk ${mender_disk_mappings[@]}
+
+    detach_device_maps ${mender_disk_mappings[@]}
+  else
+    local mender_disk_image_size=
+    calculate_mender_disk_size $pboot_start $pboot_size  \
                              $prootfs_size $data_part_size_mb  \
                              $sector_size pdata_size mender_disk_image_size
 
-  log "\tCreating Mender disk image:\
+    create_mender_disk $mender_disk_image $mender_disk_image_size
+    log "\tCreating Mender disk image:\
        \n\t\timage size: ${mender_disk_image_size} bytes\
        \n\t\tboot partition size: $((${pboot_size} * $sector_size)) bytes\
        \n\t\troot filesystem size: $((${prootfs_size} * $sector_size)) bytes\
        \n\t\tdata partition size: $(($pdata_size * $sector_size)) bytes"
-
-  create_mender_disk $mender_disk_image $mender_disk_image_size
-  format_mender_disk $mender_disk_image $mender_disk_image_size $pboot_start \
+    format_mender_disk $mender_disk_image $mender_disk_image_size $pboot_start \
                      $pboot_size $prootfs_size $pdata_size $sector_size
-  verify_mender_disk $mender_disk_image mender_disk_counts
+    verify_mender_disk $mender_disk_image mender_disk_counts
 
-  create_device_maps $mender_disk_image mender_disk_mappings
+    create_device_maps $mender_disk_image mender_disk_mappings
 
-  log "$step/$total Formatting repartitioned raw disk image..."
-  ((step++))
-  make_mender_disk_filesystem ${mender_disk_mappings[@]}
+    log "$step/$total Formatting repartitioned raw disk image..."
+    ((step++))
+    make_mender_disk_filesystem ${mender_disk_mappings[@]}
 
-  detach_device_maps ${mender_disk_mappings[@]}
+    detach_device_maps ${mender_disk_mappings[@]}
+  fi
 }
 
 do_mender_disk_image_to_artifact() {
