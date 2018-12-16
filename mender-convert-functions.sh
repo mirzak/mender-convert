@@ -409,7 +409,7 @@ format_mender_lvm_disk() {
 #
 # The second part uses defaults for size, meaning that it will occupy
 # remaining available space.
- printf "2048,2099199,83,* \n ,,8e,, \n" | sfdisk $1
+ printf "$2,$3,83,*, \n ,,8e,, \n" | sfdisk $1
 }
 
 # Takes following arguments:
