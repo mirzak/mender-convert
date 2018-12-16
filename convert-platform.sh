@@ -108,25 +108,34 @@ generic() {
   #    vmlinuz-3.10.0-862.el7.x86_64
   #
   kernel_imagetype=""
+  initrd_image_path=""
   for boot in ${target_boot_dir} ${target_rootfs_dir}; do
     kernel_imagetype=$(util_find_kernel_image ${boot})
     if [ -n "${kernel_imagetype}" ] && [ "${boot}" == "${target_boot_dir}" ]; then
       sudo cp ${kernel_imagetype} ${target_rootfs_dir}/boot
+
+      # Chances are high there is a initramfs image as well here.
+      initrd_image_path=$(sudo find ${target_boot_dir} -name initramfs-* ! -name '*-rescue-*')
+      if [ -n "${initrd_image_path}" ]; then
+        sudo cp ${initrd_image_path} ${target_rootfs_dir}/boot
+      fi
       break;
     elif [ -n "${kernel_imagetype}" ]; then
       break;
     fi
   done
 
-  if [ -z "${kernel_imagetype}" ]; then
-    log "\tCould not find the Linux kernel image. Aborting..."
-    exit 1
+  if [ -n "${kernel_imagetype}" ]; then
+    kernel_imagetype=$(basename ${kernel_imagetype})
+    log "\tFound Linux kernel image: \n\n\t${kernel_imagetype}\n"
+    sed -i '/^kernel_imagetype/s/=.*$/='${kernel_imagetype}'/' mender_grubenv_defines
   fi
 
-  kernel_imagetype=$(basename ${kernel_imagetype})
-  log "\tFound Linux kernel image: \n\n\t${kernel_imagetype}\n"
-
-  sed -i '/^kernel_imagetype/s/=.*$/='${kernel_imagetype}'/' mender_grubenv_defines
+  if [ -n "${initrd_image_path}" ]; then
+    initrd_imagetype=$(basename ${initrd_image_path})
+    log "\tFound initramfs image: \n\n\t${initrd_imagetype}\n"
+    sed -i '/^initrd_imagetype/s/=.*$/='${initrd_imagetype}'/' mender_grubenv_defines
+  fi
 
   if [ "${platform_arch}" == "arm" ]; then
     generic_arm
