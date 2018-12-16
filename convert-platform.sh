@@ -143,7 +143,8 @@ generic() {
 
   make --quiet >> "$build_log" 2>&1
   log "\tInstalling GRUB2 boot scripts and tools."
-  sudo make --quiet DESTDIR=${target_rootfs_dir} install >> "$build_log" 2>&1
+  sudo make --quiet DESTDIR=${target_boot_dir} install-boot-files >> "$build_log" 2>&1
+  sudo make --quiet DESTDIR=${target_rootfs_dir} install-tools >> "$build_log" 2>&1
 }
 
 # Raspberry Pi specific boot firmware file
