@@ -379,7 +379,8 @@ do_mender_disk_image() {
     sudo vgchange -a n mender >> "$build_log" 2>&1
     losetup -d ${available_loop} >> "$build_log" 2>&1
 
-    local mender_disk_image_size=$((${pboot_size} + ${mender_lvm_vg_size}))
+    local mender_disk_image_size=$((${pboot_size} * ${sector_size} + \
+                                 ${mender_lvm_vg_size} + ${image_overhead}))
 
     create_mender_disk $mender_disk_image $mender_disk_image_size
     format_mender_lvm_disk $mender_disk_image $pboot_start $pboot_size
