@@ -3,6 +3,8 @@
 # Partition alignment value in bytes (4MB).
 declare -i partition_alignment="4194304"
 
+declare -i image_overhead="${partition_alignment}"
+
 # Number of required heads in a final image.
 declare -i -r heads=255
 # Number of required sectors in a final image.
