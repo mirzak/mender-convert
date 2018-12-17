@@ -43,15 +43,17 @@ Expert commands:
         raw-disk-extract-images                 - extracts raw disk image content
 
 Options: [-r|--raw-disk-image | -m|--mender-disk-image | -s|--data-part-size-mb |
-          -d|--device-type | -p|--rootfs-partition-id | -i|--demo-host-ip |
-          -c|--server-cert | -u|--server-url | -t|--tenant-token |
-          -g|--mender-client -b|--bootloader-toolchain | -a|--artifact-name]
+          -o|--root-part-size-mb | -d|--device-type | -p|--rootfs-partition-id |
+          -i|--demo-host-ip | -c|--server-cert | -u|--server-url |
+          -t|--tenant-token | -g|--mender-client -b|--bootloader-toolchain |
+          -a|--artifact-name]
 
         raw-disk-image       - raw disk embedded Linux (Debian, Raspbian,
                                Ubuntu, etc.) image path
         mender-disk-image    - Mender disk image name where the script writes to
                                should have "sdimg" suffix
         data-part-size-mb    - data partition size in MB; default value 128MB
+        root-part-size-mb    - root filesystem partition size in MB; default value 4096MB
         device-type          - target device identification used to build
                                Mender image
         rootfs-partition-id  - selects root filesystem (primary|secondary)
@@ -686,6 +688,10 @@ while (( "$#" )); do
       ;;
     -s | --data-part-size-mb)
       data_part_size_mb=$2
+      shift 2
+      ;;
+    -o | --root-part-size-mb)
+      root_part_size_mb=$2
       shift 2
       ;;
     -d | --device-type)
