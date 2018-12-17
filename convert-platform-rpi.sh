@@ -128,4 +128,10 @@ tmpfs                /var/volatile        tmpfs      defaults              0  0
 /dev/mmcblk0p4   /data                    auto       defaults         0  0
 EOF
 
+mkdir -p ${output_dir}/data/u-boot
+cat <<- 'EOF' | sudo tee ${output_dir}/data/u-boot/fw_env.config 2>&1 >/dev/null
+/dev/mmcblk0 0x400000 0x4000
+/dev/mmcblk0 0x800000 0x4000
+EOF
+
 build_and_install_uboot_files ${bootloader_toolchain}

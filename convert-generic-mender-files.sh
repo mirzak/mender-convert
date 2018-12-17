@@ -101,21 +101,6 @@ create_client_files() {
   cat <<- EOF > $mender_dir/device_type
 	device_type=${device_type}
 	EOF
-
-  case "$device_type" in
-    "beaglebone")
-      cat <<- EOF > $mender_dir/fw_env.config
-	/dev/mmcblk0 0x800000 0x20000
-	/dev/mmcblk0 0x1000000 0x20000
-	EOF
-      ;;
-    "raspberrypi3")
-      cat <<- EOF > $mender_dir/fw_env.config
-	/dev/mmcblk0 0x400000 0x4000
-	/dev/mmcblk0 0x800000 0x4000
-	EOF
-      ;;
-  esac
 }
 
 get_mender_files_from_upstream() {
@@ -160,7 +145,6 @@ install_files() {
   sudo install -d -m 755 ${data_dir}/${databootdir}
 
   sudo install -m 0444 ${mender_dir}/device_type ${data_dir}/${dataconfdir}
-  sudo install -m 0644 ${mender_dir}/fw_env.config ${data_dir}/${databootdir}
 
   sudo ln -sf /data/${databootdir}/fw_env.config ${primary_dir}/etc/fw_env.config
 
