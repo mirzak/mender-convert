@@ -120,6 +120,8 @@ pboot_start=
 pboot_size=
 # Default 'data' partition size in MiB.
 data_part_size_mb=128
+# Default 'data' partition size in MiB.
+root_part_size_mb=4096
 # Data partition size in sectors.
 pdata_size=
 # Exemplary values for Beaglebone: 9.3: 4521984 9.4: 4423680
@@ -275,21 +277,55 @@ do_install_mender() {
   update_test_config_file $device_type artifact-name $artifact_name
 }
 
-do_mender_data_part() {
-  log "\tCreating a data part file-system image"
-
-  dd if=/dev/zero of=${output_dir}/data.img seek=${data_part_size_mb} count=0 bs=1M >> "$build_log" 2>&1
+do_mender_parts() {
+  log "$step/$total Creating Mender partition images"
+  ((step++))
 
   # Extract file-system type from rootfs
   if file ${output_dir}/rootfs.img | grep -q ext4; then
-    mkfs.ext4 -F ${output_dir}/data.img >> "$build_log" 2>&1
+    image_fs_type="ext4"
   elif file ${output_dir}/rootfs.img | grep -q XFS; then
-    mkfs.xfs -f ${output_dir}/data.img >> "$build_log" 2>&1
+    image_fs_type="xfs"
   else
     log "\tCould not determinate root file-system type. Aborting..."
     exit 1
   fi
 
+  log "\tCreating root filesystem part..."
+  mkdir -p ${output_dir}/rootfs-output
+  sudo mount -o ro ${output_dir}/rootfs.img ${output_dir}/rootfs-output
+
+  if [ "${image_fs_type}" == "ext4" ]; then
+    sudo rsync -SaqP --delete ${output_dir}/rootfs-output/ ${output_dir}/rootfs/ >> "$build_log" 2>&1
+  elif [ "${image_fs_type}" == "xfs" ]; then
+    sudo xfsdump -F -f ${output_dir}/xfs-dump.img ${output_dir}/rootfs-output >> "$build_log" 2>&1
+  fi
+
+  sudo umount ${output_dir}/rootfs-output
+  sudo mv ${output_dir}/rootfs.img ${output_dir}/rootfs-orig.img
+
+  dd if=/dev/zero of=${output_dir}/data.img seek=${data_part_size_mb} count=0 bs=1M >> "$build_log" 2>&1
+  dd if=/dev/zero of=${output_dir}/rootfs.img seek=${root_part_size_mb} count=0 bs=1M >> "$build_log" 2>&1
+
+  if [ "${image_fs_type}" == "ext4" ]; then
+    mkfs.ext4 -F ${output_dir}/data.img >> "$build_log" 2>&1
+    mkfs.ext4 -F ${output_dir}/rootfs.img >> "$build_log" 2>&1
+  elif [ "${image_fs_type}" == "xfs" ]; then
+    mkfs.xfs -f ${output_dir}/data.img >> "$build_log" 2>&1
+    mkfs.xfs -f ${output_dir}/rootfs.img >> "$build_log" 2>&1
+  fi
+
+  sudo mount ${output_dir}/rootfs.img ${output_dir}/rootfs-output
+
+  if [ "${image_fs_type}" == "ext4" ]; then
+    sudo rsync -SaqP --delete ${output_dir}/rootfs/ ${output_dir}/rootfs-output/ >> "$build_log" 2>&1
+  elif [ "${image_fs_type}" == "xfs" ]; then
+    sudo xfsrestore -F -f ${output_dir}/xfs-dump.img ${output_dir}/rootfs-output >> "$build_log" 2>&1
+  fi
+
+  sudo umount ${output_dir}/rootfs-output
+
+  log "\tCreating data part..."
   mkdir -p ${output_dir}/data-output
   sudo mount ${output_dir}/data.img ${output_dir}/data-output
   sudo rsync -SaqP --delete ${output_dir}/data/ ${output_dir}/data-output/ >> "$build_log" 2>&1
@@ -342,7 +378,7 @@ do_mender_disk_image() {
   # In case of LVM, we will create rootfsA, rootfsB and data as LVM volumes
   # instead of partitions.
   if [ -e ${output_dir}/lvm.img ]; then
-    local rootfs_size_aligned=${prootfs_size}
+    local rootfs_size_aligned=$(( (${root_part_size_mb} * 1024 * 1024) / ${sector_size} ))
     align_partition_size rootfs_size_aligned ${sector_size}
 
     local data_size_aligned=$(( (${data_part_size_mb} * 1024 * 1024) / ${sector_size} ))
@@ -610,12 +646,10 @@ do_from_raw_disk_image() {
   sudo umount ${output_dir}/rootfs
 
   sync
-
-  do_mender_artifact
-
-  do_mender_data_part
+  do_mender_parts
 
   sync
+  do_mender_artifact
 
   do_mender_disk_image
 }
