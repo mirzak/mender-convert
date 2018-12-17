@@ -139,7 +139,7 @@ generic() {
 
 # CentOS hacks. TODO: move/generalize
 
-  cat <<- 'EOF' | tee mender_grubenv_defines 2>&1 >/dev/null
+cat <<- EOF > mender_grubenv_defines
 mender_rootfsa_part=rootfsa
 mender_rootfsb_part=rootfsb
 mender_kernel_root_base=/dev/mapper/mender-
@@ -157,7 +157,7 @@ UUID=216f62f2-4abe-4efe-bdbe-c31f821803e8 /boot    xfs    defaults    0 0
 /dev/mapper/mender-data   /data   xfs     defaults    0 0
 EOF
 
-make >> "$build_log" 2>&1
+make ENV_DIR=/boot/grub2 >> "$build_log" 2>&1
 log "\tInstalling GRUB2 boot scripts and tools."
 sudo make ENV_DIR=/grub2 DESTDIR=${target_boot_dir} install-boot-files >> "$build_log" 2>&1
 sudo make DESTDIR=${target_rootfs_dir} install-tools >> "$build_log" 2>&1
