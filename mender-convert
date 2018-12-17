@@ -595,12 +595,13 @@ do_from_raw_disk_image() {
   sudo mount -o loop ${output_dir}/boot.img ${output_dir}/boot
   sudo mount -o loop ${output_dir}/rootfs.img ${output_dir}/rootfs
 
+  log "$step/$total Installing Mender files"
+  ((step++))
+  do_install_mender
+
   log "$step/$total Performing platform specific conversion steps"
   ((step++))
-
   ${tool_dir}/convert-platform.sh ${bootloader_toolchain}
-
-  do_install_mender
 
   log "$step/$total Un-mount extracted images"
   ((step++))
