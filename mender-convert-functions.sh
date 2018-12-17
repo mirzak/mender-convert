@@ -141,45 +141,40 @@ get_image_info() {
   local rvar_bootflag=$8
   local rvar_rootid=$9
 
-  local lbootsize=0
-  local lsubname=${limage:0:8}
+  declare -A parts
+  local lcount=0
+  #         NR  partition number
+  #      START  start of the partition in sectors
+  #        END  end of the partition in sectors
+  #    SECTORS  number of sectors
+  #       SIZE  human readable size
+  #       NAME  partition name
+  #       UUID  partition UUID
+  #       TYPE  partition type (a string, a UUID, or hex)
+  #      FLAGS  partition flags
+  #     SCHEME  partition table type (dos, gpt, ...)
+  for part in $(partx -o NR -g -r ${limage}); do
+      parts[$part,"START"]=$(partx -o START -g -r --nr $part ${limage})
+      parts[$part,"END"]=$(partx -o END -g -r --nr $part ${limage})
+      parts[$part,"SECTORS"]=$(partx -o SECTORS -g -r --nr $part ${limage})
+      parts[$part,"NAME"]=$(partx -o NAME -g -r --nr $part ${limage})
+      parts[$part,"UUID"]=$(partx -o UUID -g -r --nr $part ${limage})
+      parts[$part,"TYPE"]=$(partx -o TYPE -g -r --nr $part ${limage})
+      parts[$part,"FLAGS"]=$(partx -o FLAGS -g -r --nr $part ${limage})
+      parts[$part,"SCHEME"]=$(partx -o SCHEME -g -r --nr $part ${limage})
+      ((++lcount))
+  done
+
   local lfdisk="$(fdisk -u -l ${limage})"
-
-  local lparts=($(echo "${lfdisk}" | grep "^${lsubname}" | cut -d' ' -f1))
-  local lcount=${#lparts[@]}
-
   local lsectorsize=($(echo "${lfdisk}" | grep '^Sector' | cut -d' ' -f4))
-
-  local lfirstpartinfo="$(echo "${lfdisk}" | grep "^${lparts[0]}")"
-
-  idx_start=2
-  idx_size=4
-  idx_id=6
-
-  if [[ $lcount -gt 1 ]]; then
-    local lsecondpartinfo="$(echo "${lfdisk}" | grep "^${lparts[1]}")"
-    local lsecondpartstart=($(echo "${lsecondpartinfo}" | tr -s ' ' | cut -d' ' -f${idx_start}))
-    local lsecondpartsize=($(echo "${lsecondpartinfo}" | tr -s ' ' | cut -d' ' -f${idx_size}))
-    local lsecondpartid=($(echo "${lsecondpartinfo}" | tr -s ' ' | cut -d' ' -f${idx_id}))
-  fi
-
-  eval $rvar_bootflag="0"
-  if [[ "$lfirstpartinfo" =~ .*\*.* ]]; then
-    eval $rvar_bootflag="1"
-    ((idx_start+=1))
-    ((idx_size+=1))
-  fi
-
-  lfirstpartsize=($(echo "${lfirstpartinfo}" | tr -s ' ' | cut -d' ' -f${idx_size}))
-  lfirstpartstart=($(echo "${lfirstpartinfo}" | tr -s ' ' | cut -d' ' -f${idx_start}))
 
   eval $rvar_count="'$lcount'"
   eval $rvar_sectorsize="'$lsectorsize'"
-  eval $rvar_bootstart="'$lfirstpartstart'"
-  eval $rvar_bootsize="'$lfirstpartsize'"
-  eval $rvar_rootfsstart="'$lsecondpartstart'"
-  eval $rvar_rootfssize="'$lsecondpartsize'"
-  eval $rvar_rootid="'${lsecondpartid}'"
+  eval $rvar_bootstart="'${parts[1,"START"]}'"
+  eval $rvar_bootsize="'${parts[1,"SECTORS"]}'"
+  eval $rvar_rootfsstart="'${parts[2,"START"]}'"
+  eval $rvar_rootfssize="'${parts[2,"SECTORS"]}'"
+  eval $rvar_rootid="'${parts[2,"TYPE"]}'"
 
   [[ $lcount -gt 2 ]] && \
       { log "Unsupported type of source image. Aborting."; return 1; } || \

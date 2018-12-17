@@ -222,7 +222,7 @@ do_raw_extract_images() {
     mkfs.vfat ${output_dir}/boot.img >> "$build_log" 2>&1
   fi
 
-  if [ "${prootfs_id}" == "8e" ]; then
+  if [ "${prootfs_id}" == "0x8e" ]; then
     log "\tDetected Logical Volume Manager partition, extracting."
     extract_file_from_image ${raw_disk_image} ${prootfs_start} \
                           ${prootfs_size} "lvm.img"
