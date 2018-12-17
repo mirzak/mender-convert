@@ -198,6 +198,11 @@ do_raw_extract_images() {
 
   log "\tDetected raw disk image with $raw_disk_counts partition(s)."
 
+    log "\tExtracting boot-gap from raw disk image."
+    # This is where GRUB is located
+    extract_file_from_image ${raw_disk_image} 0 ${pboot_start} "boot-gap.img"
+
+
   if [[ ${raw_disk_counts} -gt 1 ]]; then
     log "\tExtracting boot partition from raw disk image."
 
@@ -382,8 +387,26 @@ do_mender_disk_image() {
     local mender_disk_image_size=$((${pboot_size} * ${sector_size} + \
                                  ${mender_lvm_vg_size} + ${image_overhead}))
 
+    log "\tWriting boot-gap..."
+    # Contains GRUB and boot-record
+    dd if=${output_dir}/boot-gap.img of=${mender_disk_image} bs=512 conv=sparse >> "$build_log" 2>&1
+
     create_mender_disk $mender_disk_image $mender_disk_image_size
-    format_mender_lvm_disk $mender_disk_image $pboot_start $pboot_size
+
+    (
+    echo d  # delete LVM partition
+    echo 2
+    echo n  # Add a new partition
+    echo p  # Primary partition
+    echo 2  # Partition number
+    echo    # First sector (Accept default: 1)
+    echo    # Last sector (Accept default: varies)
+    echo t  # Change type
+    echo 2  #
+    echo 8e # LVM type
+    echo w  # Write changes
+    echo q  # exit
+    ) | fdisk $mender_disk_image >> "$build_log" 2>&1
 
     create_device_maps $mender_disk_image mender_disk_mappings
 
@@ -397,8 +420,8 @@ do_mender_disk_image() {
     calculate_mender_disk_size $pboot_start $pboot_size  \
                              $prootfs_size $data_part_size_mb  \
                              $sector_size pdata_size mender_disk_image_size
-
     create_mender_disk $mender_disk_image $mender_disk_image_size
+
     log "\tCreating Mender disk image:\
        \n\t\timage size: ${mender_disk_image_size} bytes\
        \n\t\tboot partition size: $((${pboot_size} * $sector_size)) bytes\

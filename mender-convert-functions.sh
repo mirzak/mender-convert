@@ -392,31 +392,6 @@ create_mender_disk() {
 # Takes following arguments:
 #
 #  $1 - raw disk image path
-#  $2 - boot partition start offset
-#  $3 - boot partition size
-format_mender_lvm_disk() {
-# man sfdisk.8
-#...
-# sfdisk reads lines of the form
-#     <start> <size> <id> <bootable> <c,h,s> <c,h,s>
-#
-# where each line fills one partition descriptor.
-#
-# ....
-#
-# The <c,h,s> parts can (and probably should) be omitted
-#
-# ...
-# Bootable is specified as [*|-], with as default not-bootable
-#
-# The second part uses defaults for size, meaning that it will occupy
-# remaining available space.
- printf "$2,$3,83,*, \n ,,8e,, \n" | sfdisk $1
-}
-
-# Takes following arguments:
-#
-#  $1 - raw disk image path
 #  $2 - raw disk image size
 #  $3 - boot partition start offset
 #  $4 - boot partition size
