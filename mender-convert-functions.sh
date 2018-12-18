@@ -515,9 +515,9 @@ detach_device_maps() {
 
 make_mender_lvm_filesystem() {
   log "\tWriting file-system part..."
-  dd if=${output_dir}/rootfs.img of=/dev/mender/rootfsa conv=sparse >> "$build_log" 2>&1
+  sudo dd if=${output_dir}/rootfs.img of=/dev/mender/rootfsa conv=sparse >> "$build_log" 2>&1
   log "\tWriting data part..."
-  dd if=${output_dir}/data.img of=/dev/mender/data conv=sparse >> "$build_log" 2>&1
+  sudo dd if=${output_dir}/data.img of=/dev/mender/data conv=sparse >> "$build_log" 2>&1
 }
 
 # Takes following arguments:
@@ -533,10 +533,10 @@ make_mender_lvm_disk() {
 
     if [[ part_no -eq 1 ]]; then
       log "\tWriting boot part..."
-      dd if=${output_dir}/boot.img of=$map_dev conv=sparse >> "$build_log" 2>&1
+      sudo dd if=${output_dir}/boot.img of=$map_dev conv=sparse >> "$build_log" 2>&1
     elif [[ part_no -eq 2 ]]; then
       log "\tWriting LVM..."
-      dd if=${output_dir}/vg.img of=$map_dev conv=sparse >> "$build_log" 2>&1
+      sudo dd if=${output_dir}/vg.img of=$map_dev conv=sparse >> "$build_log" 2>&1
     fi
   done
 }
@@ -619,10 +619,10 @@ extract_root_from_lvm() {
     local image=$1
     local target=$2
 
-    local available_loop=$(losetup -f)
+    local available_loop=$(sudo losetup -f)
 
     # Map LVM volume group to free loop device
-    losetup ${available_loop} ${image} >> "$build_log" 2>&1
+    sudo losetup ${available_loop} ${image} >> "$build_log" 2>&1
 
     # It seems that we can reach pvs output without our parts being registered.
     # losetup does not have a "wait" flag, waiting one seconds seems to cover it
@@ -635,7 +635,7 @@ extract_root_from_lvm() {
     # Active it!
     sudo vgchange -a y ${vg_name} >> "$build_log" 2>&1
 
-    local cmd="dd if=/dev/${vg_name}/root of=${output_dir}/${target} conv=sparse"
+    local cmd="sudo dd if=/dev/${vg_name}/root of=${output_dir}/${target} conv=sparse"
     $(${cmd} >> "$build_log" 2>&1)
 
     sudo vgchange -a n ${vg_name} >> "$build_log" 2>&1

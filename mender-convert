@@ -405,8 +405,8 @@ do_mender_disk_image() {
 
     dd if=/dev/zero of=${output_dir}/vg.img seek=${mender_lvm_vg_size} bs=1 count=0 >> "$build_log" 2>&1
 
-    local available_loop=$(losetup -f)
-    losetup ${available_loop} ${output_dir}/vg.img >> "$build_log" 2>&1
+    local available_loop=$(sudo losetup -f)
+    sudo losetup ${available_loop} ${output_dir}/vg.img >> "$build_log" 2>&1
     sudo pvcreate -y -ff ${available_loop} >> "$build_log" 2>&1
     sudo vgcreate mender ${available_loop} >> "$build_log" 2>&1
 
@@ -415,12 +415,12 @@ do_mender_disk_image() {
     sudo lvcreate -y --size ${data_size_aligned}S --name data mender >> "$build_log" 2>&1
     sudo lvcreate -y --size ${swap_size_aligned}S --name swap mender >> "$build_log" 2>&1
 
-    mkswap /dev/mender/swap >> "$build_log" 2>&1
+    sudo mkswap /dev/mender/swap >> "$build_log" 2>&1
 
     make_mender_lvm_filesystem
 
     sudo vgchange -a n mender >> "$build_log" 2>&1
-    losetup -d ${available_loop} >> "$build_log" 2>&1
+    sudo losetup -d ${available_loop} >> "$build_log" 2>&1
 
     local mender_disk_image_size=$((${pboot_size} * ${sector_size} + \
                                  ${mender_lvm_vg_size} + ${image_overhead}))
