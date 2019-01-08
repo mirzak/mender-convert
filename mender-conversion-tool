@@ -15,13 +15,13 @@
 #    limitations under the License.
 
 application_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-output_dir=${application_dir}/output
+output_dir=${MENDER_CONVERSION_OUTPUT_DIR:-${application_dir}}/output
 
 set -e
 
 function cleanup {
     if mount | grep -q output/rootfs; then
-        sudo umount ${application_dir}/output/rootfs
+        sudo umount ${output_dir}/rootfs
     fi
 }
 trap cleanup EXIT
@@ -30,24 +30,41 @@ usage() {
 cat << EOF
 Usage: $(basename $0) options (:hc:d:i:m:n:o:s:t:R:)
     -c - Server certificate (Only for Mender Production setup)
+    -D - Data partition size in MB
     -d - Device type (/data/mender/device_type)
     -i - Path to image to convert
     -m - Path to Mender client binary
     -n - Mender artifact_name (/etc/mender/artifact_name)
     -o - Demo mode, takes demo server IP address as an argument
     -s - Server URL (Only for Mender Production setup)
+    -S - Swap partition size in MB
     -t - File containing Hosted Mender token (Hosted Mender mode)
     -R - Root file-system partition size in MB
+    -p - Platform (currently either rpi-ubuntu or pc-ubuntu)
     -h - Prints this text
 EOF
     exit 1
 }
 
+# Prompt the user for a yes/no answer
+# default to "no"
+promptYN() {
+    local prompt="$1"
+    printf "%s" "$prompt" >&2 && read yn
+    case $yn in
+        [Yy]* ) echo "y";;
+        *     ) echo "n";;
+    esac
+}
+
 mender_rootfs_part_size_mb=1024
+mender_data_part_size_mb=256
+mender_swap_part_size_mb=0
+mender_platform="rpi-ubuntu"
 
 [ $# -eq 0 ] && usage
 
-while getopts ":hc:d:i:m:n:o:s:t:R:" arg; do
+while getopts ":hc:d:D:i:m:n:o:p:s:S:t:R:" arg; do
     case $arg in
     c) # Mender Production server certificate
         mender_production_cert=${OPTARG}
@@ -56,6 +73,10 @@ while getopts ":hc:d:i:m:n:o:s:t:R:" arg; do
     d) # Device type
         device_type=${OPTARG}
         echo "Device type: ${device_type}"
+        ;;
+    D) # Data partition size
+        mender_data_part_size_mb=${OPTARG}
+        echo "Data partition size (MB): ${mender_data_part_size_mb}"
         ;;
     i) # Path to image
         image_to_convert=${OPTARG}
@@ -73,15 +94,23 @@ while getopts ":hc:d:i:m:n:o:s:t:R:" arg; do
         mender_demo_ip=${OPTARG}
         echo "Mender demo server IP: ${mender_demo_ip}"
         ;;
+    p) # Platform
+        mender_platform=${OPTARG}
+        echo "Mender Platform: ${mender_platform}"
+        ;;
     s) # Server URL
         mender_production_url=${OPTARG}
         echo "Mender Production URL: ${mender_production_url}"
+        ;;
+    S) # Swap partition size
+        mender_swap_part_size_mb=${OPTARG}
+        echo "Swap partition size (MB): ${mender_swap_part_size_mb}"
         ;;
     t) # Hosted Mender token
         mender_hosted_token=${OPTARG}
         echo "Hosted Mender token: ${mender_hosted_token}"
         ;;
-    R) # Hosted Mender token
+    R) # Root filesystem size
         mender_rootfs_part_size_mb=${OPTARG}
         echo "Root file-system partition size (MB): ${mender_rootfs_part_size_mb}"
         ;;
@@ -101,8 +130,27 @@ if [ ! -e ${mender_binary} ]; then
     exit 1
 fi
 
+case ${mender_platform} in
+    "rpi-ubuntu" )
+        mender_image_alignment="24576"
+        mender_rootfsA="/dev/mmcblk2"
+        mender_rootfsB="/dev/mmcblk3"
+        ;;
+
+    "pc-ubuntu" )
+        mender_image_alignment="2048"
+        mender_rootfsA="/dev/sda2"
+        mender_rootfsB="/dev/sda3"
+        ;;
+
+    * )
+        echo "Error.  Unrecognized platform ${mender_platform}"
+        usage
+        ;;
+esac
+
 stage_2_args="-a ${artifact_name} -d ${output_dir}/data -m ${mender_binary} \
-    -r ${output_dir}/rootfs -t ${device_type}"
+    -r ${output_dir}/rootfs -t ${device_type} -A ${mender_rootfsA} -B ${mender_rootfsB}"
 
 if [ -n "${mender_hosted_token}" ]; then
     stage_2_args="${stage_2_args} -T ${mender_hosted_token}"
@@ -116,6 +164,10 @@ if [ -n "${mender_demo_ip}" ]; then
     stage_2_args="${stage_2_args} -o ${mender_demo_ip}"
 fi
 
+if [ -d ${output_dir} ]; then
+    [ "$(promptYN "Warning. ${output_dir} already exists and will be overwritten. OK? ")" = "y" ] || exit 1
+fi
+
 ${application_dir}/convert-stage-1.sh ${image_to_convert}
 
 mkdir -p ${output_dir}/data
@@ -125,8 +177,8 @@ eval set -- " ${stage_2_args}"
 ${application_dir}/convert-stage-2.sh ${stage_2_args}
 
 ${application_dir}/convert-stage-3.sh
-${application_dir}/convert-stage-4.sh
-${application_dir}/convert-stage-99.sh ${mender_rootfs_part_size_mb}
+${application_dir}/convert-stage-4.sh ${mender_swap_part_size_mb} ${mender_platform}
+${application_dir}/convert-stage-99.sh ${mender_rootfs_part_size_mb} ${mender_data_part_size_mb} ${mender_swap_part_size_mb} ${mender_image_alignment} ${mender_platform}
 
 cleanup
 

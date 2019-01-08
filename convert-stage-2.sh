@@ -17,7 +17,7 @@
 set -e
 
 application_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-output_dir=${application_dir}/output
+output_dir=${MENDER_CONVERSION_OUTPUT_DIR:-${application_dir}}/output
 
 meta_mender_revision="https://raw.githubusercontent.com/mendersoftware/meta-mender/sumo/"
 mender_client_revision="https://raw.githubusercontent.com/mendersoftware/mender/1.5.x/"
@@ -29,8 +29,10 @@ Mender executables, service and configuration files installer.
 
 Usage: $(basename $0) [options]
 
-    Options: [acdmorstT]
+    Options: [ABacdmorstT]
 
+        -A - Mender rootfsA device node
+        -B - Mender rootfsB device node
         -a - Mender artifact info
         -t - Device type, e.g raspberrypi3
         -d - Target data directory
@@ -43,7 +45,7 @@ Usage: $(basename $0) [options]
 
     Examples:
 
-        $(basename $0) -r rootfs-dir -d data-dir -m mender
+        $(basename $0) -A /dev/mmcblk0p2 -B /dev/mmcblk0p3 -r rootfs-dir -d data-dir -m mender
                 -a mender-image-1.4.0 -t beaglebone -s 192.168.10.2
 
 EOF
@@ -81,8 +83,8 @@ EOF
     "InventoryPollIntervalSeconds": ${mender_inventory_poll_interval_seconds},
     "RetryPollIntervalSeconds": ${mender_retry_poll_interval_seconds},
     "UpdatePollIntervalSeconds": ${mender_update_poll_interval_seconds},
-    "RootfsPartA": "/dev/mmcblk0p2",
-    "RootfsPartB": "/dev/mmcblk0p3",
+    "RootfsPartA": "${mender_rootfsA}",
+    "RootfsPartB": "${mender_rootfsB}",
     "ServerCertificate": "/etc/mender/server.crt",
     "ServerURL": "${server_url}",
     "TenantToken": "${tenant_token}"
@@ -107,19 +109,19 @@ EOF
 }
 
 get_mender_files_from_upstream() {
-    wget -O ${output_dir}/mender-device-identity \
+    wget -qO ${output_dir}/mender-device-identity \
         ${mender_client_revision}/support/mender-device-identity
 
-    wget -O ${output_dir}/mender-inventory-hostinfo \
+    wget -qO ${output_dir}/mender-inventory-hostinfo \
         ${mender_client_revision}/support/mender-inventory-hostinfo
 
-    wget -O ${output_dir}/mender-inventory-network \
+    wget -qO ${output_dir}/mender-inventory-network \
         ${mender_client_revision}/support/mender-inventory-network
 
-    wget -O ${output_dir}/fw_printenv \
+    wget -qO ${output_dir}/fw_printenv \
         ${meta_mender_revision}/meta-mender-core/recipes-bsp/grub/files/fw_printenv
 
-    wget -O ${output_dir}/server.crt \
+    wget -qO ${output_dir}/server.crt \
         ${meta_mender_revision}/meta-mender-demo/recipes-mender/mender/files/server.crt
 }
 
@@ -190,6 +192,16 @@ do_add_mender() {
         show_help
     fi
 
+    if [ -z "${mender_rootfsA}" ]; then
+        echo "Mender rootfsA device node not set. Aborting."
+        show_help
+    fi
+
+    if [ -z "${mender_rootfsB}" ]; then
+        echo "Mender rootfsB device node not set. Aborting."
+        show_help
+    fi
+
     if [ -z "${mender}" ]; then
         echo "Mender client binary not set. Aborting."
         show_help
@@ -229,7 +241,7 @@ do_add_mender() {
     if [ -n "${mender_demo_ip}" ]; then
         mender_update_poll_interval_seconds="5"
         mender_inventory_poll_interval_seconds="5"
-        mender_retry_poll_interval_seconds="1"
+        mender_retry_poll_interval_seconds="30"
     fi
 
     get_mender_files_from_upstream
@@ -245,7 +257,7 @@ echo "Running: $(basename $0)"
 
 echo "args: $#"
 
-while getopts ":ha:c:d:m:o:r:s:t:T:" arg; do
+while getopts ":ha:A:B:c:d:m:o:r:s:t:T:" arg; do
     case $arg in
     o)
         mender_demo_ip=${OPTARG}
@@ -273,6 +285,12 @@ while getopts ":ha:c:d:m:o:r:s:t:T:" arg; do
         ;;
     a)
         artifact_name=${OPTARG}
+        ;;
+    A)
+        mender_rootfsA=${OPTARG}
+        ;;
+    B)
+        mender_rootfsB=${OPTARG}
         ;;
     h | *) # Display help.
         echo "unknown optargs ${arg}: ${OPTARG}"
