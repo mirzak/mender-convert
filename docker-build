@@ -6,4 +6,12 @@ IMAGE_NAME=mender-convert
 
 MENDER_CLIENT_VERSION="2.0.0"
 
+# As we cross-compile the Mender client, the Dockerfile must be tailored for
+# specific architectures.
+#
+# Default target is: arm (32-bit)
+if [ ! -f Dockerfile ]; then
+    cp Dockerfile.arm Dockerfile
+fi
+
 docker build . -t ${IMAGE_NAME} --build-arg mender_client_version=${MENDER_CLIENT_VERSION}
