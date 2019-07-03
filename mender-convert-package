@@ -1,0 +1,168 @@
+#!/bin/bash
+
+function trap_exit() {
+  echo "mender-convert-package has finished. Cleaning..."
+  sudo umount -f work/boot
+  sudo umount -f work/rootfs
+}
+
+function trap_term() {
+  echo "Program interrupted by user"
+}
+
+trap trap_term INT TERM
+trap trap_exit EXIT
+
+echo "Running $(basename $0): $@"
+
+source modules/bootstrap.sh
+source modules/disk.sh
+
+while (( "$#" )); do
+  case "$1" in
+    -o | --overlay)
+      overlays+="${2}"
+      shift 2
+      ;;
+    -c | --config)
+      configs+="${2}"
+      shift 2
+      ;;
+    -d | --disk-image)
+      disk_image="${2}"
+      shift 2
+      ;;
+    *)
+      echo "Sorry but the provided option is not supported: $1"
+      exit 1
+      ;;
+  esac
+done
+
+source modules/config.sh "${configs[@]}"
+
+PARTED="/usr/bin/parted"
+if [ ! -f ${PARTED} ]; then
+    PARTED="/sbin/parted"
+fi
+
+output_dir=work
+
+boot_part=$(disk_boot_part)
+root_part=$(disk_root_part)
+
+# Final output
+mkdir -p deploy
+
+# Create mount points
+mkdir -p work/boot
+mkdir -p work/rootfs
+
+sudo mount ${boot_part} work/boot
+sudo mount ${root_part} work/rootfs
+
+# Convert to 512 blocks
+disk_image_total_sectors=$(disk_mb_to_sectors ${MENDER_STORAGE_TOTAL_SIZE_MB})
+boot_part_sectors=$(disk_mb_to_sectors ${MENDER_BOOT_PART_SIZE_MB})
+data_part_sectors=$(disk_mb_to_sectors ${MENDER_DATA_PART_SIZE_MB})
+alignment_sectors=$((${MENDER_PARTITION_ALIGNMENT} / 512))
+
+if [ "${MENDER_GRUB_EFI_INTEGRATION}" == "y" ]; then
+  boot_part_start=${alignment_sectors}
+  overhead_sectors=$(( ${alignment_sectors} * 4 ))
+else
+  # The two first blocks are typically reserved for U-boot environment.
+  overhead_sectors=$(( ${alignment_sectors} * 6 ))
+  boot_part_start=$(( ${alignment_sectors} * 3))
+fi
+
+# Calculate rootfs size
+rootfs_part_sectors=$(( (${disk_image_total_sectors} - ${data_part_sectors} \
+        - ${boot_part_sectors} - ${overhead_sectors}) / 2 ))
+
+device_type=$(cat work/rootfs/data/mender/device_type | sed 's/[^=]*=//')
+artifact_name=$(cat work/rootfs/etc/mender/artifact_info | sed 's/[^=]*=//')
+
+image_name="${device_type}-${artifact_name}"
+
+actual_rootfs_size=$(sudo du --apparent-size -s --block-size=512 work/rootfs | cut -f 1)
+
+# 50 % free space, not to be confused with rootfs_part_sectors
+rootfs_image_sectors=$(awk -v r1="$actual_rootfs_size" 'BEGIN{printf "%.0f", r1 * 1.50}')
+
+if [ ${rootfs_image_sectors} -gt ${rootfs_part_sectors} ]; then
+    log_warn "The calculated rootfs partition size $(disk_sectors_to_mb ${rootfs_part_sectors}) MiB is too small."
+    log_warn "The actual rootfs image size is $(disk_sectors_to_mb ${rootfs_image_sectors}) MiB"
+    log_fatal "You can try adjusting the MENDER_STORAGE_TOTAL_SIZE_MB variable to increase available space"
+fi
+
+# Extract file-system type from rootfs
+if file ${root_part} | grep -q ext4; then
+  image_fs_type="ext4"
+elif file ${root_part} | grep -q XFS; then
+  image_fs_type="xfs"
+else
+  log_warn "$(file work/${root_part})"
+  log_fatal "Could not determinate root file-system type. Aborting..."
+fi
+
+disk_create_file_system_from_folder "work/rootfs/data/" "work/data.img" \
+  "${data_part_sectors}" "${image_fs_type}"
+
+# Clear this area as it will be contained in the data.img
+sudo rm -rf work/rootfs/data/*
+
+disk_create_file_system_from_folder "work/rootfs/" "work/rootfs.img" \
+  "${rootfs_image_sectors}" "${image_fs_type}"
+
+log_info "Copying root filesystem image to deploy directory"
+run_and_log_cmd "cp --sparse=always work/rootfs.img deploy/${image_name}.fs.img"
+
+mender_create_artifact "${device_type}" "${artifact_name}"
+
+log_info "Creating Mender compatible disk-image"
+
+sdimg_path=deploy/${image_name}.sdimg
+
+log_info "Total disk size: $(disk_sectors_to_mb ${disk_image_total_sectors}) MiB"
+log_info "  Boot partition $(disk_sectors_to_mb ${boot_part_sectors}) MiB"
+log_info "  RootFS         $(disk_sectors_to_mb ${rootfs_part_sectors}) x 2 MiB"
+log_info "  Data           $(disk_sectors_to_mb ${data_part_sectors}) MiB"
+
+# Initialize sdcard image file
+run_and_log_cmd \
+  "dd if=/dev/zero of=${sdimg_path} bs=512 count=0 seek=${disk_image_total_sectors} status=none"
+
+# boot_part_start, is defined at the beginning of this file
+boot_part_end=$(( ${boot_part_start} + ${boot_part_sectors} - 1 ))
+
+rootfsa_start=$(disk_align_sectors ${boot_part_end} ${MENDER_PARTITION_ALIGNMENT} )
+rootfsa_end=$(( ${rootfsa_start} + ${rootfs_part_sectors} - 1 ))
+
+rootfsb_start=$(disk_align_sectors ${rootfsa_end} ${MENDER_PARTITION_ALIGNMENT} )
+rootfsb_end=$(( ${rootfsb_start} + ${rootfs_part_sectors} - 1 ))
+
+data_start=$(disk_align_sectors ${rootfsb_end} ${MENDER_PARTITION_ALIGNMENT} )
+data_end=$(( ${data_start} + ${data_part_sectors} - 1 ))
+
+# Create partition table. TODO: GPT support
+run_and_log_cmd "${PARTED} -s ${sdimg_path} mklabel msdos"
+run_and_log_cmd "${PARTED} -s ${sdimg_path} unit s mkpart primary fat32 ${boot_part_start} ${boot_part_end}"
+run_and_log_cmd "${PARTED} -s ${sdimg_path} set 1 boot on"
+run_and_log_cmd "${PARTED} -s ${sdimg_path} -- unit s mkpart primary ext2 ${rootfsa_start} ${rootfsa_end}"
+run_and_log_cmd "${PARTED} -s ${sdimg_path} -- unit s mkpart primary ext2 ${rootfsb_start} ${rootfsb_end}"
+run_and_log_cmd "${PARTED} -s ${sdimg_path} -- unit s mkpart primary ext2 ${data_start} ${data_end}"
+run_and_log_cmd "${PARTED} -s ${sdimg_path} print"
+
+# Burn Partitions
+disk_write_at_offset "${boot_part}" "${sdimg_path}" "${boot_part_start}"
+disk_write_at_offset "${output_dir}/rootfs.img" "${sdimg_path}" "${rootfsa_start}"
+disk_write_at_offset "${output_dir}/rootfs.img" "${sdimg_path}" "${rootfsb_start}"
+disk_write_at_offset "${output_dir}/data.img" "${sdimg_path}" "${data_start}"
+
+if [ "${MENDER_COMPRESS_DISK_IMAGE}" == "y" ]; then
+  log_info "Compressing ${sdimg_path}.gz"
+  run_and_log_cmd "pigz --best --force ${sdimg_path}"
+fi
+
+log_info "Conversion has completed! \o/"

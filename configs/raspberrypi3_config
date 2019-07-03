@@ -1,0 +1,6 @@
+
+RASPBERRYPI_BINARIES="raspberrypi3-integration-2018.07.tar.gz"
+RASPBERRYPI_KERNEL_IMAGE="kernel7.img"
+MENDER_KERNEL_IMAGETYPE=zImage
+
+source configs/raspberrypi_config

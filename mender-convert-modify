@@ -1,0 +1,125 @@
+#!/bin/bash
+
+# Default that can be overridden by providing this method in a
+# configuration file passed with '--config'
+function platform_modify() {
+    true
+}
+
+function trap_exit() {
+  echo "mender-convert-modify has finished. Cleaning..."
+  sudo umount -f work/boot
+  sudo umount -f work/rootfs
+}
+
+function trap_term() {
+  echo "Program interrupted by user"
+}
+
+trap trap_term INT TERM
+trap trap_exit EXIT
+
+echo "Running $(basename $0): $@"
+
+source modules/bootstrap.sh
+source modules/disk.sh
+
+while (( "$#" )); do
+  case "$1" in
+    -o | --overlay)
+      overlays+="${2}"
+      shift 2
+      ;;
+    -c | --config)
+      configs+="${2}"
+      shift 2
+      ;;
+    -d | --disk-image)
+      disk_image="${2}"
+      shift 2
+      ;;
+    *)
+      echo "Sorry, but the provided option is not supported: $1"
+      exit 1
+      ;;
+  esac
+done
+
+source modules/config.sh "${configs[@]}"
+
+boot_part=$(disk_boot_part)
+root_part=$(disk_root_part)
+
+# Create mount points
+mkdir -p work/boot
+mkdir -p work/rootfs
+
+sudo mount ${boot_part} work/boot
+sudo mount ${root_part} work/rootfs
+
+mkdir -p work/mender-deb/files
+
+log_info "Installing Mender client and related files"
+
+run_and_log_cmd "wget -Nq ${MENDER_STORAGE_DEB_URL}/${MENDER_CLIENT_DEB} -P work/mender-deb"
+
+cd work/mender-deb
+run_and_log_cmd "ar -xv ${MENDER_CLIENT_DEB}"
+run_and_log_cmd "tar -xf data.tar.xz -C files"
+cd - > /dev/null 2>&1
+
+run_and_log_cmd "sudo rsync --archive --verbose work/mender-deb/files/* work/rootfs/"
+
+if [ "${MENDER_ENABLE_SYSTEMD}" == "y" ]; then
+  run_and_log_cmd "sudo ln -sf /lib/systemd/system/mender.service \
+        work/rootfs/etc/systemd/system/multi-user.target.wants/mender.service"
+fi
+
+if [ "${MENDER_GRUB_EFI_INTEGRATION}" == "y" ]; then
+    # TODO: Do the GRUB stuff!
+    true
+fi
+
+run_and_log_cmd "sudo mkdir -p work/rootfs/data/mender"
+run_and_log_cmd "sudo ln -sf /data/mender work/rootfs/var/lib/mender"
+
+cat <<- EOF > work/mender.conf.data
+{
+  "RootfsPartA": "${MENDER_KERNEL_ROOT_BASE}${MENDER_ROOTFSA_PART}",
+  "RootfsPartB": "${MENDER_KERNEL_ROOT_BASE}${MENDER_ROOTFSB_PART}"
+}
+EOF
+
+run_and_log_cmd "sudo cp work/mender.conf.data work/rootfs/data/mender/mender.conf"
+
+if [ -z "${MENDER_DEVICE_TYPE}" ]; then # Empty be default
+  device_type=$(cat work/rootfs/etc/hostname)
+else
+  device_type="${MENDER_DEVICE_TYPE}"
+fi
+
+run_and_log_cmd "echo 'device_type=${device_type}' > work/device_type"
+run_and_log_cmd "sudo cp work/device_type work/rootfs/data/mender/"
+run_and_log_cmd "sudo echo 'artifact_name=${MENDER_ARTIFACT_NAME}' \
+  > work/rootfs/etc/mender/artifact_info"
+
+log_info "Installing a custom /etc/fstab (see work/convert.log for more info)"
+
+run_and_log_cmd "sudo mkdir -p work/rootfs/${MENDER_BOOT_PART_MOUNTPOINT}"
+
+sudo bash -c "cat <<- EOF > work/rootfs/etc/fstab
+# stock fstab - you probably want to override this with a machine specific one
+/dev/root            /                    auto       defaults              1  1
+proc                 /proc                proc       defaults              0  0
+
+${MENDER_KERNEL_ROOT_BASE}1   ${MENDER_BOOT_PART_MOUNTPOINT}          auto       defaults,sync    0  0
+${MENDER_KERNEL_ROOT_BASE}4   /data          auto       defaults      0  0
+EOF"
+
+log_info "Performing platform specific modifications (if any)"
+platform_modify
+
+for overlay in "${overlays[@]}"; do
+  log_info "Applying rootfs overlay: ${overlay}"
+  run_and_log_cmd "sudo rsync --archive --verbose ${overlay}/ work/rootfs/"
+done
