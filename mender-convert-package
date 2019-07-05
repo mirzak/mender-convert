@@ -76,6 +76,16 @@ else
   boot_part_start=$(( ${alignment_sectors} * 3))
 fi
 
+# Validate boot part size
+actual_boot_size=$(du --apparent-size -s --block-size=512 ${boot_part} | cut -f 1)
+if [ ${actual_boot_size} -ge ${boot_part_sectors} ]; then
+  log_warn "The allocated boot part size $(disk_sectors_to_mb ${boot_part_sectors}) MiB is too small."
+  log_warn "The actual boot part size is $(disk_sectors_to_mb ${actual_boot_size}) MiB"
+  log_warn "Will adjust MENDER_BOOT_PART_SIZE_MB automatically"
+  log_warn "Considered adjusting the configuration file to avoid this message"
+  boot_part_sectors=${actual_boot_size}
+fi
+
 # Calculate rootfs size
 rootfs_part_sectors=$(( (${disk_image_total_sectors} - ${data_part_sectors} \
         - ${boot_part_sectors} - ${overhead_sectors}) / 2 ))
