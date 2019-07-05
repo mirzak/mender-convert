@@ -92,8 +92,13 @@ EOF
 
 run_and_log_cmd "sudo cp work/mender.conf.data work/rootfs/data/mender/mender.conf"
 
-if [ -z "${MENDER_DEVICE_TYPE}" ]; then # Empty be default
-  device_type=$(cat work/rootfs/etc/hostname)
+if [ -z "${MENDER_DEVICE_TYPE}" ]; then
+  # Observed systems who do not have this file, e.g images generated with mkosi
+  if [ -f work/rootfs/etc/hostname ]; then
+    device_type=$(cat work/rootfs/etc/hostname)
+  else
+    device_type="default"
+  fi
 else
   device_type="${MENDER_DEVICE_TYPE}"
 fi
