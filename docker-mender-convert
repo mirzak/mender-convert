@@ -1,0 +1,17 @@
+#!/bin/sh
+
+set -e
+
+IMAGE_NAME=mender-convert
+
+MENDER_CONVERT_DIR="$(pwd)"
+mkdir -p output
+
+docker run \
+       --mount type=bind,source="$MENDER_CONVERT_DIR,target=/mender-convert" \
+       --privileged=true \
+       --cap-add=SYS_MODULE \
+       -v /dev:/dev \
+       -v /lib/modules:/lib/modules:ro \
+       --env MENDER_ARTIFACT_NAME=${MENDER_ARTIFACT_NAME} \
+       $IMAGE_NAME "$@"
