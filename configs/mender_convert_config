@@ -56,7 +56,7 @@ MENDER_DEVICE_TYPE=""
 # (see MENDER_BOOT_PART_SIZE_MB) and data partitions
 # (see MENDER_DATA_PART_SIZE_MB).
 #
-MENDER_STORAGE_TOTAL_SIZE_MB="4096"
+MENDER_STORAGE_TOTAL_SIZE_MB="8192"
 
 # The size of the boot partition in the generated .biosimg, .sdimg or .uefiimg
 # file.
