@@ -55,6 +55,29 @@ probe_grub_efi_name() {
   echo "$efi_name"
 }
 
+# Prints Debian arch name depending on target architecture
+#
+# No input parameters and these work on the assumption that boot and root parts
+# are mounted at work/boot and work/rootfs
+probe_debian_arch_name() {
+  deb_arch=""
+  arch=$(probe_arch)
+  case "${arch}" in
+    "x86-64")
+      deb_arch="amd64"
+      ;;
+    "arm")
+      deb_arch="armhf"
+      ;;
+    "aarch64")
+      deb_arch="arm64"
+      ;;
+    *)
+    log_fatal "Unknown arch: ${arch}"
+  esac
+  echo "${deb_arch}"
+}
+
 # Prints GRUB EFI target name depending on target architecture
 #
 # This is what the file name should be when put on target boot part.
