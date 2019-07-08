@@ -86,11 +86,6 @@ MENDER_STORAGE_URL="https://d1b0l86ne08fsf.cloudfront.net"
 
 MENDER_GITHUB_ORG="https://github.com/mendersoftware"
 
-MENDER_STORAGE_DEB_URL="${MENDER_STORAGE_URL}/2.0.1/dist-packages/debian/armhf"
-
-# Mender client debian package
-MENDER_CLIENT_DEB="mender-client_2.0.1-1_armhf.deb"
-
 MENDER_BOOT_PART_MOUNTPOINT="/boot/efi"
 
 # Partition index of root filesystem A
