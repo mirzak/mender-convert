@@ -1,3 +1,15 @@
+# Specific Linux kernel boot arguments
+#
+# Typically you would read the content of /proc/cmdline on a "golden image"
+# add the appropriate arguments here.
+#
+# This will override the defaults set by by grub-mender-grubenv
+MENDER_GRUB_KERNEL_BOOT_ARGS=""
+
+# grub-mender-grubenv is the Mender integration for the GRUB bootloader
+MENDER_GRUBENV_VERSION="1.3.0"
+MENDER_GRUBENV_URL="${MENDER_GITHUB_ORG}/grub-mender-grubenv/archive/${MENDER_GRUBENV_VERSION}.tar.gz"
+
 # Name of the storage device containing root filesystem partitions in GRUB
 # format.
 MENDER_GRUB_STORAGE_DEVICE=hd0
@@ -7,3 +19,5 @@ MENDER_GRUB_KERNEL_IMAGETYPE=bzImage
 
 # Type of initrd image
 MENDER_GRUB_INITRD_IMAGETYPE=initrd.img
+
+MENDER_GRUB_BINARY_STORAGE_URL="${MENDER_STORAGE_URL}/mender-convert/grub-efi"
