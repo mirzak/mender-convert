@@ -91,11 +91,6 @@ MENDER_STORAGE_DEB_URL="${MENDER_STORAGE_URL}/2.0.1/dist-packages/debian/armhf"
 # Mender client debian package
 MENDER_CLIENT_DEB="mender-client_2.0.1-1_armhf.deb"
 
-# Use U-boot -> GRUB -> EFI boot-loader integration
-#
-# Only disable this if you know what you are doing
-MENDER_GRUB_EFI_INTEGRATION=y
-
 MENDER_BOOT_PART_MOUNTPOINT="/boot/efi"
 
 # Partition index of root filesystem A
@@ -107,18 +102,15 @@ MENDER_ROOTFSB_PART=3
 # Device file corresponding to the root filesystem partitions, without index.
 MENDER_KERNEL_ROOT_BASE=/dev/mmcblk0p
 
-# Name of the storage device containing root filesystem partitions in GRUB
-# format.
-MENDER_GRUB_STORAGE_DEVICE=hd0
-
-# Type of kernel (bzImage or zImage)
-MENDER_KERNEL_IMAGETYPE=bzImage
-
-# Type of initrd image
-MENDER_INITRD_IMAGETYPE=initrd.img
-
 # Basename of DTB that should be loaded by the bootloader.
 MENDER_KERNEL_DEVICETREE=kernel.dtb
+
+# Use U-boot -> GRUB -> EFI boot-loader integration
+#
+# Only disable this if you know what you are doing
+MENDER_GRUB_EFI_INTEGRATION=y
+
+source configs/mender_grub_config
 
 mender_create_artifact() {
   local -r device_type="${1}"

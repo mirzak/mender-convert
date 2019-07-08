@@ -1,0 +1,9 @@
+# Name of the storage device containing root filesystem partitions in GRUB
+# format.
+MENDER_GRUB_STORAGE_DEVICE=hd0
+
+# Type of kernel (bzImage or zImage)
+MENDER_GRUB_KERNEL_IMAGETYPE=bzImage
+
+# Type of initrd image
+MENDER_GRUB_INITRD_IMAGETYPE=initrd.img
