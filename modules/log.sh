@@ -39,6 +39,12 @@ function log_warn {
   log "WARN" "$message"
 }
 
+# Log the given message at ERROR level.
+function log_error {
+  local -r message="$1"
+  log "ERROR" "$message"
+}
+
 # Log the given message at FATAL level.
 function log_fatal {
   local -r message="$1"
