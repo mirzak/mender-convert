@@ -33,6 +33,10 @@ if [ -z "${disk_image}" ]; then
   exit 1
 fi
 
+if [ ! -e ${disk_image} ]; then
+  log_fatal "File not found: ${disk_image}"
+fi
+
 source modules/config.sh "${configs[@]}"
 
 MKFS_VFAT="/usr/bin/mkfs.vfat"
