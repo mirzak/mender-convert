@@ -14,6 +14,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+# Default that can be overridden by providing this method in a
+# configuration file passed with '--config'
+function platform_package() {
+    true
+}
+
 function trap_exit() {
   echo "mender-convert-package has finished. Cleaning..."
   sudo umount -f work/boot
@@ -183,6 +189,9 @@ disk_write_at_offset "${boot_part}" "${sdimg_path}" "${boot_part_start}"
 disk_write_at_offset "${output_dir}/rootfs.img" "${sdimg_path}" "${rootfsa_start}"
 disk_write_at_offset "${output_dir}/rootfs.img" "${sdimg_path}" "${rootfsb_start}"
 disk_write_at_offset "${output_dir}/data.img" "${sdimg_path}" "${data_start}"
+
+log_info "Performing platform specific package operations (if any)"
+platform_package
 
 if [ "${MENDER_COMPRESS_DISK_IMAGE}" == "y" ]; then
   log_info "Compressing ${sdimg_path}.gz"
