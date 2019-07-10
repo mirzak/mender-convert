@@ -1,4 +1,3 @@
-MENDER_KERNEL_ROOT_BASE=/dev/mmcblk0p
 ROCKPRO64_BINARIES="sd-boot-integration-2017.09.tar.gz"
 
 source configs/rockpro64_config

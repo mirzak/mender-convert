@@ -1,4 +1,4 @@
-MENDER_KERNEL_ROOT_BASE=/dev/mmcblk1p
+MENDER_STORAGE_DEVICE=/dev/mmcblk1p
 ROCKPRO64_BINARIES="emmc-boot-integration-2017.09.tar.gz"
 
 source configs/rockpro64_config
