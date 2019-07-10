@@ -98,7 +98,7 @@ fi
 
 # Validate boot part size
 actual_boot_size=$(du --apparent-size -s --block-size=512 ${boot_part} | cut -f 1)
-if [ ${actual_boot_size} -ge ${boot_part_sectors} ]; then
+if [ ${actual_boot_size} -gt ${boot_part_sectors} ]; then
   log_warn "The allocated boot part size $(disk_sectors_to_mb ${boot_part_sectors}) MiB is too small."
   log_warn "The actual boot part size is $(disk_sectors_to_mb ${actual_boot_size}) MiB"
   log_warn "Will adjust MENDER_BOOT_PART_SIZE_MB automatically"
