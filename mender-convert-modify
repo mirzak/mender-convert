@@ -96,8 +96,18 @@ if [ "${MENDER_GRUB_EFI_INTEGRATION}" == "y" ]; then
   run_and_log_cmd "wget -Nq '${MENDER_GRUBENV_URL}' -P work/"
   run_and_log_cmd "tar xvf work/${MENDER_GRUBENV_VERSION}.tar.gz -C work/"
 
-  kernel_imagetype=$(probe_kernel_in_boot_and_root)
-  initrd_imagetype=$(probe_initrd_in_boot_and_root)
+  if [ -z "${MENDER_GRUB_KERNEL_IMAGETYPE}" ]; then
+    kernel_imagetype=$(probe_kernel_in_boot_and_root)
+  else
+    kernel_imagetype="${MENDER_GRUB_KERNEL_IMAGETYPE}"
+  fi
+
+  if [ -z "${MENDER_GRUB_INITRD_IMAGETYPE}" ]; then
+    initrd_imagetype=$(probe_initrd_in_boot_and_root)
+  else
+    kernel_imagetype="${MENDER_GRUB_INITRD_IMAGETYPE}"
+  fi
+
   cat <<- EOF > work/grub-mender-grubenv-${MENDER_GRUBENV_VERSION}/mender_grubenv_defines
 mender_rootfsa_part=${MENDER_ROOTFSA_PART}
 mender_rootfsb_part=${MENDER_ROOTFSB_PART}

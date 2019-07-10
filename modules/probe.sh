@@ -193,9 +193,8 @@ probe_kernel_in_boot_and_root() {
     log_info "Found Linux kernel image: \n\n\t${kernel_imagetype_path}\n"
     kernel_imagetype=$(basename ${kernel_imagetype_path})
   else
-    log_warn "Was not able to find the Linux kernel image."
-    log_warn "Will fallback to using MENDER_GRUB_KERNEL_IMAGETYPE"
-    kernel_imagetype=${MENDER_GRUB_KERNEL_IMAGETYPE}
+    log_warn "Unfortunatly we where not able to find the Linux kernel image."
+    log_fatal "Please specifc the image name using MENDER_GRUB_KERNEL_IMAGETYPE"
   fi
   echo "${kernel_imagetype}"
 }
@@ -228,9 +227,8 @@ probe_initrd_in_boot_and_root() {
     log_info "Found initramfs image: \n\n\t${initrd_image_path}\n"
     initrd_imagetype=$(basename ${initrd_image_path})
   else
-    log_warn "Was not able to find the initrd/initramfs image."
-    log_warn "Will fallback to using MENDER_GRUB_INITRD_IMAGETYPE"
-    initrd_imagetype=${MENDER_GRUB_INITRD_IMAGETYPE}
+    log_warn "Unfortunatly we where not able to find the initrd image."
+    log_fatal "Please specifc the image name using MENDER_GRUB_INITRD_IMAGETYPE"
   fi
 
   echo "${initrd_imagetype}"
