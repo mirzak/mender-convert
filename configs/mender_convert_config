@@ -98,11 +98,6 @@ MENDER_KERNEL_ROOT_BASE=/dev/mmcblk0p
 # Basename of DTB that should be loaded by the bootloader.
 MENDER_KERNEL_DEVICETREE=kernel.dtb
 
-# Use U-boot -> GRUB -> EFI boot-loader integration
-#
-# Only disable this if you know what you are doing
-MENDER_GRUB_EFI_INTEGRATION=y
-
 source configs/mender_grub_config
 
 mender_create_artifact() {

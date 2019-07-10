@@ -1,9 +1,15 @@
+# Use U-boot -> GRUB -> EFI boot-loader integration
+#
+# Only disable this if you know what you are doing
+MENDER_GRUB_EFI_INTEGRATION=y
+
 # Specific Linux kernel boot arguments
 #
 # Typically you would read the content of /proc/cmdline on a "golden image"
 # add the appropriate arguments here.
 #
-# This will override the defaults set by by grub-mender-grubenv
+# This will override the defaults set by by grub-mender-grubenv, if not an
+# empty string
 MENDER_GRUB_KERNEL_BOOT_ARGS=""
 
 # grub-mender-grubenv is the Mender integration for the GRUB bootloader

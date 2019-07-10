@@ -27,7 +27,7 @@ function trap_exit() {
 }
 
 function trap_term() {
-  echo "Program interrupted by user"
+  true
 }
 
 trap trap_term INT TERM
@@ -115,7 +115,7 @@ EOF
   fi
 
   cd work/grub-mender-grubenv-${MENDER_GRUBENV_VERSION}
-  run_and_log_cmd "make"
+  run_and_log_cmd "make 2>&1"
   run_and_log_cmd "sudo make DESTDIR=../ BOOT_DIR=boot install-boot-files"
   run_and_log_cmd "sudo make DESTDIR=../rootfs install-tools"
   cd - > /dev/null 2>&1

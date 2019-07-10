@@ -22,12 +22,12 @@ function platform_package() {
 
 function trap_exit() {
   echo "mender-convert-package has finished. Cleaning..."
-  sudo umount -f work/boot
-  sudo umount -f work/rootfs
+  sudo umount -f work/boot > /dev/null
+  sudo umount -f work/rootfs > /dev/null
 }
 
 function trap_term() {
-  echo "Program interrupted by user"
+  true
 }
 
 trap trap_term INT TERM
