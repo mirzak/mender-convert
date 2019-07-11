@@ -180,7 +180,7 @@ else
 fi
 
 run_and_log_cmd "echo 'device_type=${device_type}' > work/device_type"
-run_and_log_cmd "sudo cp work/device_type work/rootfs/data/mender/"
+run_and_log_cmd "sudo install -m 0444 work/device_type work/rootfs/data/mender/"
 run_and_log_cmd "sudo echo 'artifact_name=${MENDER_ARTIFACT_NAME}' \
   > work/rootfs/etc/mender/artifact_info"
 
