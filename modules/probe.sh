@@ -227,8 +227,10 @@ probe_initrd_in_boot_and_root() {
     log_info "Found initramfs image: \n\n\t${initrd_image_path}\n"
     initrd_imagetype=$(basename ${initrd_image_path})
   else
-    log_warn "Unfortunatly we where not able to find the initrd image."
-    log_fatal "Please specifc the image name using MENDER_GRUB_INITRD_IMAGETYPE"
+    log_info "Unfortunatly we where not able to find the initrd image."
+    log_info "Please specifc the image name using MENDER_GRUB_INITRD_IMAGETYPE \
+(only required if your board is using this)"
+    initrd_imagetype=""
   fi
 
   echo "${initrd_imagetype}"
