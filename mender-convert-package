@@ -146,7 +146,7 @@ disk_create_file_system_from_folder "work/rootfs/" "work/rootfs.img" \
   "${rootfs_image_sectors}" "${image_fs_type}"
 
 log_info "Copying root filesystem image to deploy directory"
-run_and_log_cmd "cp --sparse=always work/rootfs.img deploy/${image_name}.fs.img"
+run_and_log_cmd "cp --sparse=always work/rootfs.img deploy/${image_name}.${image_fs_type}"
 
 mender_create_artifact "${device_type}" "${artifact_name}"
 
