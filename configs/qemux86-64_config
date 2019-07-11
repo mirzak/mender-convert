@@ -13,4 +13,4 @@
 #    qemu-system-x86_64 -enable-kvm -m 512 -smp 2 -bios /usr/share/ovmf/x64/OVMF_CODE.fd -drive format=raw,file=qemux86-64-release-1.sdimg
 
 MENDER_STORAGE_DEVICE=/dev/sda
-MENDER_DEVICE_TYPE="qemux86-64"
+MENDER_DEVICE_TYPE="qemux86_64"
