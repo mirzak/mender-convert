@@ -106,6 +106,12 @@ if [ ${actual_boot_size} -gt ${boot_part_sectors} ]; then
   boot_part_sectors=${actual_boot_size}
 fi
 
+# Make sure that the boot part sector size is aligned to
+# MENDER_PARTITION_ALIGNMENT, it is possible that the boot part is extracted
+# as-is from the input image, and the input image might not have used the same
+# alignment as our configuration
+boot_part_sectors=$(disk_align_sectors ${boot_part_sectors} ${MENDER_PARTITION_ALIGNMENT} )
+
 # Calculate rootfs size
 rootfs_part_sectors=$(( (${disk_image_total_sectors} - ${data_part_sectors} \
         - ${boot_part_sectors} - ${overhead_sectors}) / 2 ))
