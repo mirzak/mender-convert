@@ -116,6 +116,9 @@ boot_part_sectors=$(disk_align_sectors ${boot_part_sectors} ${MENDER_PARTITION_A
 rootfs_part_sectors=$(( (${disk_image_total_sectors} - ${data_part_sectors} \
         - ${boot_part_sectors} - ${overhead_sectors}) / 2 ))
 
+# Make sure rootfs size is aligned to MENDER_PARTITION_ALIGNMENT
+rootfs_part_sectors=$(disk_align_sectors ${rootfs_part_sectors} ${MENDER_PARTITION_ALIGNMENT} )
+
 device_type=$(cat work/rootfs/data/mender/device_type | sed 's/[^=]*=//')
 artifact_name=$(cat work/rootfs/etc/mender/artifact_info | sed 's/[^=]*=//')
 
