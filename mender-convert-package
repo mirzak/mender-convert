@@ -208,3 +208,43 @@ if [ "${MENDER_COMPRESS_DISK_IMAGE}" == "y" ]; then
 fi
 
 log_info "Conversion has completed! \o/"
+
+##################### Create configuration file for tests ######################
+
+if [ "${MENDER_GRUB_EFI_INTEGRATION}" == "y" ]; then
+  boot_part_mountpoint="/boot/efi"
+
+  # This is the name of the DISTRO_FEATURES in Yocto
+  distro_feature="mender-grub"
+else
+  boot_part_mountpoint="/uboot"
+
+  # This is the name of the DISTRO_FEATURES in Yocto
+  distro_feature="mender-uboot"
+fi
+
+cat <<- EOF > deploy/${image_name}.cfg
+MENDER_BOOT_PART="${MENDER_STORAGE_DEVICE}${MENDER_BOOT_PART_INDEX}"
+MENDER_ROOTFS_PART_A="${MENDER_STORAGE_DEVICE}${MENDER_ROOTFS_PART_A_INDEX}"
+MENDER_ROOTFS_PART_B="${MENDER_STORAGE_DEVICE}${MENDER_ROOTFS_PART_B_INDEX}"
+MENDER_BOOT_PART_MOUNT_LOCATION="${boot_part_mountpoint}"
+MENDER_BOOT_PART_SIZE_MB="$(disk_sectors_to_mb ${boot_part_sectors})"
+MENDER_DATA_PART_SIZE_MB="${MENDER_DATA_PART_SIZE_MB}"
+MENDER_DEVICE_TYPE="${device_type}"
+MENDER_PARTITIONING_OVERHEAD_KB="$(( (${overhead_sectors} * 512) / 1024 ))"
+MENDER_PARTITION_ALIGNMENT="${MENDER_PARTITION_ALIGNMENT}"
+MENDER_STORAGE_DEVICE="${MENDER_STORAGE_DEVICE}"
+MENDER_STORAGE_TOTAL_SIZE_MB="${MENDER_STORAGE_TOTAL_SIZE_MB}"
+MENDER_UBOOT_ENV_STORAGE_DEVICE_OFFSET="12582912"
+MENDER_ARTIFACT_NAME="${artifact_name}"
+DISTRO_FEATURES="${distro_feature}"
+DEPLOY_DIR_IMAGE="${PWD}/deploy"
+MENDER_MACHINE="${device_type}"
+EOF
+
+# Something that the tests expect to be defined (originally from Yocto)
+cat <<- EOF >> deploy/${image_name}.cfg
+IMAGE_FSTYPES="${image_fs_type} mender sdimg"
+ARTIFACTIMG_FSTYPE="${image_fs_type}"
+LAYER_CONF_VERSION="2"
+EOF
