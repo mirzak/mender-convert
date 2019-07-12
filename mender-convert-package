@@ -92,8 +92,8 @@ if [ "${MENDER_GRUB_EFI_INTEGRATION}" == "y" ]; then
   overhead_sectors=$(( ${alignment_sectors} * 4 ))
 else
   # The two first blocks are typically reserved for U-boot environment.
-  overhead_sectors=$(( ${alignment_sectors} * 6 ))
   boot_part_start=$(( ${alignment_sectors} * 3))
+  overhead_sectors=$(( ${alignment_sectors} * 6 ))
 fi
 
 # Validate boot part size
