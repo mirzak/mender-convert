@@ -2,3 +2,4 @@ deploy
 input
 work
 rootfs_overlay_demo/*
+tests
