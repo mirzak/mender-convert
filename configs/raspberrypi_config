@@ -18,8 +18,19 @@ function platform_modify() {
   # TODO: run_and_log_cmd has problems with '' characters
   run_and_log_cmd "sed -i 's/\b[ ]root=[^ ]*/ root=\${mender_kernel_root}/' work/rpi/cmdline.txt"
 
-  # Do not run resize scripts
-  run_and_log_cmd "sed -i 's|init=/usr/lib/raspi-config/init_resize.sh|d|' work/rpi/cmdline.txt"
+  # Root filesystem can not be resized when the disk is partition according
+  # to Mender layout, where the rootfs partition is the not last one which
+  # is a requirement to be able to do an "online" resize.
+  #
+  # This disables resize of rootfs on boot but applies the changes to
+  # cmdline.txt that are performed in the init_resize.sh script.
+  #
+  # Extracted from /usr/lib/raspi-config/init_resize.sh
+  run_and_log_cmd "sed -i 's| init=/usr/lib/raspi-config/init_resize\.sh||' work/rpi/cmdline.txt"
+  run_and_log_cmd "sed -i 's| sdhci\.debug_quirks2=4||' work/rpi/cmdline.txt"
+  if ! grep -q splash work/rpi/cmdline.txt; then
+    run_and_log_cmd "sed -i 's/ quiet//g' work/rpi/cmdline.txt"
+  fi
 
   # Update Linux kernel command arguments with our custom configuration
   run_and_log_cmd "sudo cp work/rpi/cmdline.txt work/boot/"
