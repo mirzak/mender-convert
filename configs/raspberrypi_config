@@ -15,7 +15,7 @@ function platform_modify() {
   # Make a copy of Linux kernel arguments and modify.
   run_and_log_cmd "cp work/boot/cmdline.txt work/rpi/cmdline.txt"
 
-  # TODO: run_and_log_cmd has problems with '' characters
+  # Set a dynamic rootfs part (required for Mender A/B update strategy)
   run_and_log_cmd "sed -i 's/\b[ ]root=[^ ]*/ root=\${mender_kernel_root}/' work/rpi/cmdline.txt"
 
   # Root filesystem can not be resized when the disk is partition according
@@ -43,23 +43,23 @@ function platform_modify() {
   # the service.
   run_and_log_cmd "sudo ln -sf /dev/null work/rootfs/etc/systemd/system/udisks2.service"
 
-  # # Extract Linux kernel and install to /boot directory on rootfs
+  # Extract Linux kernel and install to /boot directory on rootfs
   run_and_log_cmd "sudo cp work/boot/${RASPBERRYPI_KERNEL_IMAGE} work/rootfs/boot/${MENDER_KERNEL_IMAGETYPE}"
 
-  # # Replace kernel with U-boot and add boot script
+  # Replace kernel with U-boot and add boot script
   run_and_log_cmd "sudo mkdir -p work/rootfs/uboot"
   run_and_log_cmd "sudo cp work/rpi/binaries/u-boot.bin work/boot/${RASPBERRYPI_KERNEL_IMAGE}"
   run_and_log_cmd "sudo cp work/rpi/binaries/boot.scr work/boot"
   run_and_log_cmd "sudo cp work/rpi/binaries/fw_env.config work/rootfs/etc/"
 
-  # # Raspberry Pi applications expect to find this on the device and in some
-  # # cases parse the options to determinate functionality.
+  # Raspberry Pi applications expect to find this on the device and in some
+  # cases parse the options to determinate functionality.
   run_and_log_cmd "sudo ln -fs /uboot/config.txt work/rootfs/boot/config.txt"
 
   run_and_log_cmd "sudo install -m 755 work/rpi/binaries/fw_printenv work/rootfs/sbin/fw_printenv"
   run_and_log_cmd "sudo ln -fs /sbin/fw_printenv work/rootfs/sbin/fw_setenv"
 
-  # # Remove original 'resize2fs_once' script and its symbolic link.
+  # Remove original 'resize2fs_once' script and its symbolic link.
   run_and_log_cmd "sudo unlink work/rootfs/etc/rc3.d/S01resize2fs_once"
   run_and_log_cmd "sudo rm work/rootfs/etc/init.d/resize2fs_once"
 }
