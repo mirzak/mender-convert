@@ -194,6 +194,10 @@ fi
 
 run_and_log_cmd "sudo mkdir -p work/rootfs/${boot_part_mountpoint}"
 
+if [ "${MENDER_DATA_PART_GROWFS}" == "y" ]; then
+  MENDER_DATA_PART_FSTAB_OPTS="${MENDER_DATA_PART_FSTAB_OPTS},x-systemd.growfs"
+fi
+
 sudo bash -c "cat <<- EOF > work/rootfs/etc/fstab
 # stock fstab - you probably want to override this with a machine specific one
 /dev/root            /                    auto       defaults              1  1

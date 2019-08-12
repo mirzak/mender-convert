@@ -30,6 +30,13 @@ MENDER_ENABLE_SYSTEMD=y
 # Set the fstab options for mounting the data partition
 MENDER_DATA_PART_FSTAB_OPTS="defaults"
 
+# The file system will be grown to occupy the full block device. If the file
+# system is already at maximum size, no action will be performed.
+#
+# This feature is utilizing x−systemd.growfs and will only work on systemd 242
+# and newer and nothing will be done if an older systemd version is used.
+MENDER_DATA_PART_GROWFS=y
+
 # The name of the image or update that will be built. This is what the device
 # will report that it is running, and different updates must have different
 # names.
