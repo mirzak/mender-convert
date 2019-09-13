@@ -202,6 +202,12 @@ disk_write_at_offset "${output_dir}/data.img" "${sdimg_path}" "${data_start}"
 log_info "Performing platform specific package operations (if any)"
 platform_package
 
+# Create bmap index
+index_fs_type=""
+if [ "${MENDER_USE_BMAP}" == "y" ] && [ -n "$(type -path bmaptool)" ]; then
+    run_and_log_cmd "/usr/bin/bmaptool create ${sdimg_path} > ${sdimg_path}.bmap"
+fi
+
 if [ "${MENDER_COMPRESS_DISK_IMAGE}" == "y" ]; then
   log_info "Compressing ${sdimg_path}.gz"
   run_and_log_cmd "pigz --best --force ${sdimg_path}"
@@ -244,7 +250,7 @@ EOF
 
 # Something that the tests expect to be defined (originally from Yocto)
 cat <<- EOF >> deploy/${image_name}.cfg
-IMAGE_FSTYPES="${image_fs_type} mender sdimg"
+IMAGE_FSTYPES="${image_fs_type} mender"
 ARTIFACTIMG_FSTYPE="${image_fs_type}"
 LAYER_CONF_VERSION="2"
 EOF

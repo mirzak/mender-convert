@@ -114,6 +114,9 @@ MENDER_DATA_PART_INDEX="4"
 # Basename of DTB that should be loaded by the bootloader.
 MENDER_KERNEL_DEVICETREE=kernel.dtb
 
+# Generate bmap index files
+MENDER_USE_BMAP="n"
+
 source configs/mender_grub_config
 
 mender_create_artifact() {

@@ -28,7 +28,9 @@ RUN apt-get update && apt-get install -y \
 # to compile mender-grub-env
     make \
 # To get rid of 'sh: 1: udevadm: not found' errors triggered by parted
-    udev
+    udev \
+# Build bmap index file
+    bmap-tools
 
 RUN wget -q -O /usr/bin/mender-artifact https://d1b0l86ne08fsf.cloudfront.net/mender-artifact/$MENDER_ARTIFACT_VERSION/mender-artifact \
     && chmod +x /usr/bin/mender-artifact
