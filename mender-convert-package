@@ -202,6 +202,16 @@ disk_write_at_offset "${output_dir}/data.img" "${sdimg_path}" "${data_start}"
 log_info "Performing platform specific package operations (if any)"
 platform_package
 
+# Create bmap index
+if [ "${MENDER_USE_BMAP}" == "y" ]; then
+  BMAP_TOOL="/usr/bin/bmaptool"
+  if [ ! -e "${BMAP_TOOL}" ]; then
+    log_error "You have enabled the MENDER_USE_BMAP option, but we could not find the required 'bmaptool'"
+    log_fatal "You can install 'bmaptool' with: apt-get install bmap-tools (on Debian based distributions)"
+  fi
+  run_and_log_cmd "${BMAP_TOOL} create ${sdimg_path} > ${sdimg_path}.bmap"
+fi
+
 if [ "${MENDER_COMPRESS_DISK_IMAGE}" == "y" ]; then
   log_info "Compressing ${sdimg_path}.gz"
   run_and_log_cmd "pigz --best --force ${sdimg_path}"
