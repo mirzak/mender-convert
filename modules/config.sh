@@ -14,7 +14,10 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-for config in configs/mender_convert_config "$@"; do
+configs=configs/mender_convert_config
+configs+=" $*"
+
+for config in $configs; do
   log_info "Using configuration file: ${config}"
   source ${config}
 done
